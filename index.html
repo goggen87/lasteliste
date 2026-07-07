@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f3b31" />
+    <title>Lasteliste</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=49" />
+    <link rel="manifest" href="./manifest.webmanifest?v=49" />
+    <link rel="stylesheet" href="./styles.css?v=49" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="todayLabel">Dagens lasteliste</p>
+          <h1>Lasteliste</h1>
+        </div>
+        <div class="top-actions">
+          <form class="crew-form" id="crewForm" autocomplete="off">
+            <label>
+              Operatør
+              <input id="operatorInput" type="text" inputmode="text" placeholder="Navn" />
+            </label>
+            <label>
+              Maskin
+              <input id="machineInput" type="text" inputmode="text" placeholder="Maskin" />
+            </label>
+          </form>
+          <button class="icon-button" id="installButton" type="button" hidden aria-label="Installer app">
+            <span aria-hidden="true">+</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="summary-strip" aria-label="Dagens oversikt">
+        <div>
+          <span id="totalLoads">0</span>
+          <small>lass</small>
+        </div>
+        <div>
+          <span id="totalTonnes">0</span>
+          <small>ca. tonn</small>
+        </div>
+        <div>
+          <span id="activeTrucks">0</span>
+          <small>biler</small>
+        </div>
+      </section>
+
+      <section class="panel truck-panel">
+        <div class="section-heading">
+          <h2>Biler</h2>
+          <div class="truck-heading-actions">
+            <button class="primary-button new-truck-button" id="showTruckForm" type="button">Ny bil</button>
+            <button class="secondary-button" id="previousTrucksButton" type="button">Tidligere</button>
+          </div>
+        </div>
+
+        <form class="truck-form" id="truckForm" autocomplete="off">
+          <label>
+            Skiltnr
+            <input id="plateInput" name="plate" type="text" inputmode="text" placeholder="AB 12345" />
+          </label>
+          <label>
+            Kallenavn / firma
+            <input id="nameInput" name="name" type="text" inputmode="text" placeholder="Ola, Førde Maskin ..." />
+          </label>
+          <div class="field-row">
+            <label>
+              Type
+              <select id="axleInput" name="axles">
+                <option value="3">3 aks</option>
+                <option value="4" selected>4 aks</option>
+                <option value="custom">Egendefinert</option>
+              </select>
+            </label>
+            <label>
+              Tonn/lass
+              <input id="capacityInput" name="capacity" type="number" inputmode="decimal" min="0" step="0.5" value="16" />
+            </label>
+          </div>
+          <div class="truck-form-actions">
+            <button class="primary-button" id="addTruckButton" type="submit">Legg til bil</button>
+          </div>
+          <p class="form-message" id="formMessage" role="status"></p>
+        </form>
+
+        <div class="previous-trucks is-hidden" id="previousTrucksPanel"></div>
+
+        <div class="truck-list" id="truckList" aria-label="Registrerte biler"></div>
+      </section>
+
+      <section class="panel load-panel">
+        <div class="section-heading load-heading">
+          <div class="load-title">
+            <h2>Massetyper</h2>
+            <button class="text-button organize-button" id="organizeButton" type="button">Organiser</button>
+          </div>
+          <p class="selected-truck" id="selectedTruckLabel">Velg bil først</p>
+        </div>
+        <label class="destination-field">
+          Kjører til
+          <input id="destinationInput" type="text" inputmode="text" placeholder="Tipp, kunde, område ..." />
+        </label>
+        <div class="material-grid" id="materialGrid" aria-label="Velg masse"></div>
+        <form class="custom-entry is-hidden" id="customEntry" autocomplete="off">
+          <label>
+            Egen masse
+            <input id="customMaterialInput" type="text" inputmode="text" placeholder="TØMMER" />
+          </label>
+          <div class="custom-entry-actions">
+            <button class="primary-button" id="saveCustomMaterial" type="submit">Logg</button>
+            <button class="secondary-button" id="cancelCustomMaterial" type="button">Avbryt</button>
+          </div>
+        </form>
+        <div class="overflow-materials is-hidden" id="overflowMaterials" aria-label="Andre masser"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Logg</h2>
+          <div class="actions">
+            <button class="secondary-button" id="exportButton" type="button">Eksporter</button>
+            <button class="danger-button" id="clearButton" type="button">Rydd dag</button>
+          </div>
+        </div>
+        <div class="log-table" id="logList"></div>
+        <div class="material-totals" id="materialTotals"></div>
+      </section>
+    </main>
+
+    <template id="emptyLogTemplate">
+      <div class="empty-state">Ingen lass logget ennå.</div>
+    </template>
+
+    <div class="confirm-backdrop is-hidden" id="deleteMaterialDialog" role="dialog" aria-modal="true" aria-labelledby="deleteMaterialTitle">
+      <div class="confirm-box">
+        <h2 id="deleteMaterialTitle">Slette massetype?</h2>
+        <p id="deleteMaterialText">Vil du slette denne massetypen fra valglisten?</p>
+        <div class="confirm-actions">
+          <button class="danger-button" id="confirmDeleteMaterial" type="button">Slett</button>
+          <button class="secondary-button" id="cancelDeleteMaterial" type="button">Avbryt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-backdrop is-hidden" id="deletePreviousTruckDialog" role="dialog" aria-modal="true" aria-labelledby="deletePreviousTruckTitle">
+      <div class="confirm-box">
+        <h2 id="deletePreviousTruckTitle">Slette tidligere bil?</h2>
+        <p id="deletePreviousTruckText">Vil du slette denne bilen fra tidligere-listen?</p>
+        <div class="confirm-actions">
+          <button class="danger-button" id="confirmDeletePreviousTruck" type="button">Slett</button>
+          <button class="secondary-button" id="cancelDeletePreviousTruck" type="button">Avbryt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-backdrop is-hidden" id="exportDialog" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+      <div class="confirm-box">
+        <h2 id="exportTitle">Eksporter dagen</h2>
+        <p>Velg hvordan du vil ta vare på lastelisten.</p>
+        <div class="export-actions">
+          <button class="primary-button" id="sendPdfButton" type="button">Send PDF</button>
+          <button class="primary-button" id="sendCsvButton" type="button">Send CSV</button>
+          <button class="secondary-button" id="savePdfButton" type="button">Lagre PDF</button>
+          <button class="secondary-button" id="saveCsvButton" type="button">Lagre CSV</button>
+          <button class="secondary-button" id="cancelExportButton" type="button">Avbryt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-backdrop is-hidden" id="finishDayDialog" role="dialog" aria-modal="true" aria-labelledby="finishDayTitle">
+      <div class="confirm-box">
+        <h2 id="finishDayTitle">Fullføre dagen?</h2>
+        <p>Lastelisten ryddes, men biler og massetyper huskes til neste dag.</p>
+        <div class="confirm-actions">
+          <button class="danger-button" id="confirmFinishDay" type="button">Fullfør dag</button>
+          <button class="secondary-button" id="cancelFinishDay" type="button">Fortsett</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js?v=49" type="module"></script>
+  </body>
+</html>

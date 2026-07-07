@@ -1,0 +1,978 @@
+:root {
+  color-scheme: light;
+  --bg: #eef2ed;
+  --ink: #17241d;
+  --muted: #667267;
+  --panel: #ffffff;
+  --line: #d7ddd6;
+  --accent: #27654f;
+  --accent-strong: #1f4f3f;
+  --accent-soft: #dcebe4;
+  --warning: #a34f16;
+  --danger: #9d2f2f;
+  --stone: #5f6767;
+  --shadow: 0 12px 30px rgba(28, 49, 39, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #dfe7df 0%, var(--bg) 42%);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+.app-shell {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top)) 14px max(28px, env(safe-area-inset-bottom));
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 2px 16px;
+}
+
+.top-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.crew-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  width: min(48vw, 250px);
+}
+
+.crew-form label {
+  gap: 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.crew-form input {
+  height: 34px;
+  border-radius: 8px;
+  padding: 0 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.eyebrow {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 12vw, 3.25rem);
+  line-height: 0.98;
+}
+
+h2 {
+  font-size: 1.1rem;
+}
+
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.summary-strip div {
+  min-width: 0;
+  border: 1px solid rgba(31, 79, 63, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 12px 10px;
+}
+
+.summary-strip span {
+  display: block;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.summary-strip small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.truck-panel {
+  overflow: hidden;
+  border-color: rgba(31, 79, 63, 0.24);
+  background: linear-gradient(180deg, #f8fbf8 0%, #eef5f0 100%);
+  padding: 12px;
+}
+
+.truck-panel .section-heading {
+  margin: -12px -12px 12px;
+  border-bottom: 1px solid rgba(14, 48, 36, 0.22);
+  background: linear-gradient(135deg, #244b3d 0%, #2f6f55 100%);
+  padding: 12px;
+}
+
+.truck-panel h2 {
+  color: white;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-heading p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.load-heading {
+  align-items: stretch;
+}
+
+.load-title {
+  display: grid;
+  gap: 6px;
+}
+
+.organize-button {
+  min-height: 32px;
+  justify-self: start;
+  border: 1px solid var(--line);
+  background: #fbfcfb;
+  padding: 0 10px;
+}
+
+.organize-button.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.selected-truck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: min(58%, 260px);
+  max-width: 62%;
+  border: 2px solid rgba(39, 101, 79, 0.34);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #edf7f1 0%, var(--accent-soft) 100%);
+  color: var(--accent-strong);
+  padding: 10px 12px;
+  font-size: 1.08rem;
+  font-weight: 900;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.section-heading .selected-truck {
+  text-align: center;
+}
+
+.selected-truck.is-actionable {
+  cursor: pointer;
+}
+
+.selected-truck.is-actionable:hover,
+.selected-truck.is-actionable:focus-visible {
+  border-color: var(--accent);
+  background: #edf7f1;
+}
+
+.truck-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.truck-form.is-collapsed {
+  display: none;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.form-message {
+  min-height: 20px;
+  color: var(--danger);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+input,
+select {
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  color: var(--ink);
+  padding: 0 12px;
+  font-size: 1rem;
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: 3px solid rgba(39, 101, 79, 0.22);
+  outline-offset: 2px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.truck-form-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.truck-heading-actions {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.new-truck-button {
+  min-width: 96px;
+  padding: 0 14px;
+}
+
+.truck-panel .new-truck-button {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: white;
+  color: var(--accent-strong);
+  box-shadow: 0 4px 12px rgba(12, 37, 28, 0.18);
+}
+
+.truck-panel #previousTrucksButton {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button,
+.text-button,
+.icon-button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: white;
+}
+
+.secondary-button {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  padding: 0 12px;
+}
+
+.danger-button {
+  background: #f4dfdd;
+  color: var(--danger);
+  padding: 0 12px;
+}
+
+.text-button {
+  background: transparent;
+  color: var(--accent-strong);
+  padding: 0 4px;
+}
+
+.icon-button {
+  width: 48px;
+  background: var(--accent);
+  color: white;
+  font-size: 1.5rem;
+}
+
+.truck-list {
+  display: grid;
+  gap: 7px;
+}
+
+.truck-list.is-hidden {
+  display: none;
+}
+
+.truck-list.is-pair,
+.truck-list.is-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.truck-list.is-dense {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.previous-trucks {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.previous-trucks.is-hidden {
+  display: none;
+}
+
+.previous-truck-item {
+  display: grid;
+  grid-template-columns: 1fr 34px;
+  align-items: stretch;
+  min-height: 46px;
+  border: 1px solid rgba(39, 101, 79, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 2px 7px rgba(28, 49, 39, 0.05);
+  overflow: hidden;
+}
+
+.previous-truck-item.is-added {
+  border-color: rgba(39, 101, 79, 0.34);
+  background: var(--accent-soft);
+}
+
+.previous-truck {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 850;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.previous-truck-item.is-added .previous-truck {
+  color: var(--accent-strong);
+}
+
+.delete-previous-truck {
+  width: 34px;
+  min-height: 34px;
+  align-self: stretch;
+  border: 0;
+  border-left: 1px solid rgba(23, 36, 29, 0.08);
+  background: transparent;
+  color: rgba(157, 47, 47, 0.68);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.delete-previous-truck:focus-visible,
+.delete-previous-truck:hover {
+  background: #f4dfdd;
+  color: var(--danger);
+}
+
+.truck-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 62px;
+  border: 1px solid rgba(39, 101, 79, 0.16);
+  border-left: 4px solid rgba(39, 101, 79, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  padding: 10px 12px 10px 10px;
+  box-shadow: 0 2px 9px rgba(28, 49, 39, 0.06);
+}
+
+.truck-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.truck-list.is-compact .truck-card,
+.truck-list.is-dense .truck-card {
+  min-height: 48px;
+  gap: 6px;
+  padding: 8px 8px 8px 7px;
+}
+
+.truck-list.is-dense .truck-card {
+  grid-template-columns: 1fr;
+  align-content: center;
+  min-height: 44px;
+  text-align: center;
+}
+
+.truck-list.is-dense .truck-select {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.truck-card.is-selected {
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  background: linear-gradient(180deg, #d9eee4 0%, #cde6da 100%);
+  box-shadow: inset 0 0 0 1px rgba(39, 101, 79, 0.28), 0 3px 10px rgba(31, 79, 63, 0.14);
+}
+
+.truck-plate {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.truck-list.is-compact .truck-plate {
+  font-size: 1rem;
+  line-height: 1.05;
+}
+
+.truck-list.is-dense .truck-plate {
+  display: -webkit-box;
+  min-height: 2.05em;
+  overflow: hidden;
+  font-size: 0.86rem;
+  line-height: 1.04;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.truck-meta,
+.truck-count {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.truck-list.is-compact .truck-meta,
+.truck-list.is-dense .truck-meta {
+  display: none;
+}
+
+.truck-count {
+  border-radius: 999px;
+  background: rgba(39, 101, 79, 0.08);
+  color: var(--accent-strong);
+  padding: 4px 7px;
+  font-weight: 900;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.truck-list.is-compact .truck-count,
+.truck-list.is-dense .truck-count {
+  border-radius: 999px;
+  background: rgba(39, 101, 79, 0.1);
+  color: var(--accent-strong);
+  padding: 3px 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.truck-list.is-dense .truck-count {
+  justify-self: center;
+  padding: 2px 6px;
+  font-size: 0.68rem;
+}
+
+.material-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.material-tile {
+  position: relative;
+  min-width: 0;
+}
+
+.material-tile-other {
+  grid-column: 1 / -1;
+  width: min(50%, 220px);
+  justify-self: center;
+}
+
+.material-tile.is-dragging {
+  opacity: 0.62;
+}
+
+.material-grid.is-organizing .material-tile-main .material-button {
+  cursor: grab;
+  touch-action: none;
+}
+
+.material-grid.is-organizing .material-tile-main.is-dragging .material-button {
+  cursor: grabbing;
+}
+
+.material-tile.is-drag-over .material-button {
+  outline: 3px solid rgba(39, 101, 79, 0.34);
+  outline-offset: 2px;
+}
+
+.material-button,
+.custom-material-button {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid rgba(23, 36, 29, 0.1);
+  border-radius: 8px;
+  color: white;
+  padding: 10px;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.material-button {
+  padding-right: 34px;
+  background-position: center;
+  background-size: cover;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.78), 0 0 10px rgba(0, 0, 0, 0.45);
+}
+
+.mass-asfalt {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.34)), url("./assets/masser/asfalt.jpg");
+}
+
+.mass-sprengstein {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.32)), url("./assets/masser/sprengstein.jpg");
+}
+
+.mass-forurenset {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)), url("./assets/masser/forurenset.jpg");
+}
+
+.mass-jord {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.36)), url("./assets/masser/jord.jpg");
+}
+
+.mass-leire {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.34)), url("./assets/masser/leire.jpg");
+}
+
+.mass-sand {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.32)), url("./assets/masser/sand.jpg");
+}
+
+.destination-field {
+  margin: -2px 0 12px;
+}
+
+.destination-field input {
+  height: 44px;
+  background: #f7faf7;
+  font-weight: 800;
+}
+
+.material-button.is-confirmed {
+  animation: material-confirm 2100ms ease-out;
+}
+
+@keyframes material-confirm {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.95), 0 0 0 0 rgba(255, 215, 92, 0.72);
+    filter: brightness(1.32) saturate(1.12);
+    transform: scale(1.025);
+  }
+
+  55% {
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.78), 0 0 0 11px rgba(255, 215, 92, 0.36);
+    filter: brightness(1.18) saturate(1.06);
+  }
+
+  100% {
+    box-shadow: none;
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+
+.drag-hint {
+  display: none;
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: rgba(23, 36, 29, 0.74);
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.material-grid.is-organizing .drag-hint {
+  display: inline-flex;
+}
+
+.delete-material {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 18px;
+  min-height: 18px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0;
+}
+
+.delete-material:focus-visible,
+.delete-material:hover {
+  background: #f4dfdd;
+  color: var(--danger);
+}
+
+.material-button:disabled,
+.custom-material-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.custom-entry {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  padding: 10px;
+}
+
+.custom-entry.is-hidden {
+  display: none;
+}
+
+.custom-entry-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.overflow-materials {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.overflow-materials.is-hidden {
+  display: none;
+}
+
+.custom-material-button {
+  min-height: 52px;
+  background: #edf4ef;
+  color: var(--accent-strong);
+  padding: 8px 10px;
+}
+
+.custom-empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.log-table {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.empty-state {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  padding: 10px 12px;
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: 52px minmax(68px, 1fr) minmax(72px, 0.95fr) minmax(64px, 0.85fr) 38px 34px;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  padding: 8px 10px;
+  font-size: 0.88rem;
+}
+
+.log-header {
+  min-height: 34px;
+  background: #edf4ef;
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.log-time {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.log-truck,
+.log-material,
+.log-destination {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+
+.log-destination {
+  color: var(--muted);
+}
+
+.log-tonnes {
+  color: var(--muted);
+  font-weight: 900;
+  text-align: right;
+}
+
+.delete-log {
+  width: 34px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #f2e9e5;
+  color: var(--warning);
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.material-totals {
+  margin-top: 14px;
+}
+
+.material-totals h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.totals-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.totals-grid span {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: rgba(23, 36, 29, 0.38);
+  padding: 18px;
+}
+
+.confirm-backdrop.is-hidden {
+  display: none;
+}
+
+.confirm-box {
+  width: min(100%, 360px);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 20px 50px rgba(23, 36, 29, 0.28);
+  padding: 16px;
+}
+
+.confirm-box h2 {
+  margin-bottom: 8px;
+}
+
+.confirm-box p {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.export-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.empty-state {
+  color: var(--muted);
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .crew-form {
+    grid-template-columns: 1fr;
+    width: 126px;
+  }
+
+  .log-row {
+    grid-template-columns: 42px minmax(54px, 1fr) minmax(56px, 0.9fr) minmax(52px, 0.85fr) 32px 32px;
+    gap: 6px;
+    padding: 8px;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .truck-heading-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .field-row,
+  .truck-form-actions,
+  .material-grid,
+  .overflow-materials {
+    grid-template-columns: 1fr;
+  }
+
+  .truck-list.is-pair,
+  .truck-list.is-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .truck-list.is-dense {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .selected-truck {
+    min-width: 150px;
+    max-width: 66%;
+    font-size: 0.95rem;
+  }
+
+  .material-tile-other {
+    width: 100%;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .log-row {
+    grid-template-columns: 40px minmax(48px, 1fr) minmax(52px, 0.9fr) minmax(48px, 0.85fr) 30px 30px;
+  }
+}
