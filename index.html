@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#1f3b31" />
     <title>Lasteliste</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=49" />
-    <link rel="manifest" href="./manifest.webmanifest?v=49" />
-    <link rel="stylesheet" href="./styles.css?v=49" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=52" />
+    <link rel="manifest" href="./manifest.webmanifest?v=52" />
+    <link rel="stylesheet" href="./styles.css?v=52" />
   </head>
   <body>
     <main class="app-shell">
@@ -116,6 +116,17 @@
           </div>
         </form>
         <div class="overflow-materials is-hidden" id="overflowMaterials" aria-label="Andre masser"></div>
+        <div class="delivery-materials is-hidden" id="deliveryMaterials" aria-label="Tilkjørte masser"></div>
+        <form class="custom-entry delivery-entry is-hidden" id="deliveryEntry" autocomplete="off">
+          <label>
+            Egen tilkjørt masse
+            <input id="deliveryMaterialInput" type="text" inputmode="text" placeholder="KABELSAND" />
+          </label>
+          <div class="custom-entry-actions">
+            <button class="primary-button" id="saveDeliveryMaterial" type="submit">Logg inn</button>
+            <button class="secondary-button" id="cancelDeliveryMaterial" type="button">Avbryt</button>
+          </div>
+        </form>
       </section>
 
       <section class="panel">
@@ -162,10 +173,8 @@
         <h2 id="exportTitle">Eksporter dagen</h2>
         <p>Velg hvordan du vil ta vare på lastelisten.</p>
         <div class="export-actions">
-          <button class="primary-button" id="sendPdfButton" type="button">Send PDF</button>
-          <button class="primary-button" id="sendCsvButton" type="button">Send CSV</button>
+          <button class="primary-button" id="sendAllButton" type="button">Send PDF + Excel</button>
           <button class="secondary-button" id="savePdfButton" type="button">Lagre PDF</button>
-          <button class="secondary-button" id="saveCsvButton" type="button">Lagre CSV</button>
           <button class="secondary-button" id="cancelExportButton" type="button">Avbryt</button>
         </div>
       </div>
@@ -182,6 +191,6 @@
       </div>
     </div>
 
-    <script src="./app.js?v=49" type="module"></script>
+    <script src="./app.js?v=52" type="module"></script>
   </body>
 </html>

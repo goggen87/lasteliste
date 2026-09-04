@@ -8,6 +8,9 @@
   --accent: #27654f;
   --accent-strong: #1f4f3f;
   --accent-soft: #dcebe4;
+  --incoming: #16844f;
+  --incoming-strong: #0f5f3b;
+  --incoming-soft: #dff3e8;
   --warning: #a34f16;
   --danger: #9d2f2f;
   --stone: #5f6767;
@@ -572,10 +575,35 @@ button:focus-visible {
   min-width: 0;
 }
 
-.material-tile-other {
-  grid-column: 1 / -1;
-  width: min(50%, 220px);
-  justify-self: center;
+.material-tile-other,
+.material-tile-incoming {
+  width: 100%;
+}
+
+.material-tile-incoming .incoming-toggle {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 78% 50%, rgba(255, 255, 255, 0.2) 0 22px, transparent 23px),
+    linear-gradient(135deg, #1d8b58 0%, #0f5f3b 100%);
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.34);
+}
+
+.material-tile-incoming .incoming-toggle::before,
+.material-tile-incoming .incoming-toggle::after {
+  content: "";
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  width: 38px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-50%);
+}
+
+.material-tile-incoming .incoming-toggle::after {
+  transform: translateY(-50%) rotate(90deg);
 }
 
 .material-tile.is-dragging {
@@ -741,15 +769,41 @@ button:focus-visible {
   gap: 8px;
 }
 
-.overflow-materials {
+.overflow-materials,
+.delivery-materials {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 10px;
 }
 
-.overflow-materials.is-hidden {
+.overflow-materials.is-hidden,
+.delivery-materials.is-hidden {
   display: none;
+}
+
+.delivery-materials {
+  border: 1px solid rgba(22, 132, 79, 0.24);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f3fbf6 0%, #e4f4eb 100%);
+  padding: 10px;
+}
+
+.delivery-entry {
+  border-color: rgba(22, 132, 79, 0.28);
+  background: #f5fbf7;
+}
+
+.incoming-material-button,
+.incoming-add-button {
+  border-color: rgba(22, 132, 79, 0.22);
+  background: white;
+  color: var(--incoming-strong);
+}
+
+.incoming-add-button {
+  border-style: dashed;
+  background: var(--incoming-soft);
 }
 
 .custom-material-button {
@@ -797,6 +851,15 @@ button:focus-visible {
   background: #fbfcfb;
   padding: 8px 10px;
   font-size: 0.88rem;
+}
+
+.log-row.is-incoming {
+  border-color: rgba(22, 132, 79, 0.28);
+  background: linear-gradient(180deg, #ecf8f1 0%, #dcf1e5 100%);
+}
+
+.log-row.is-incoming .log-material {
+  color: var(--incoming-strong);
 }
 
 .log-header {
@@ -866,6 +929,12 @@ button:focus-visible {
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 900;
+}
+
+.totals-grid span.is-incoming-total {
+  border-color: rgba(22, 132, 79, 0.25);
+  background: var(--incoming-soft);
+  color: var(--incoming-strong);
 }
 
 .confirm-backdrop {
@@ -944,7 +1013,8 @@ button:focus-visible {
   .field-row,
   .truck-form-actions,
   .material-grid,
-  .overflow-materials {
+  .overflow-materials,
+  .delivery-materials {
     grid-template-columns: 1fr;
   }
 
@@ -961,10 +1031,6 @@ button:focus-visible {
     min-width: 150px;
     max-width: 66%;
     font-size: 0.95rem;
-  }
-
-  .material-tile-other {
-    width: 100%;
   }
 
   .actions {

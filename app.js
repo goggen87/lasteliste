@@ -1,6 +1,16 @@
 const STORAGE_KEY = "lasteliste:v1";
 const MAX_VISIBLE_MATERIALS = 6;
 
+const deliveryBaseMaterials = [
+  "Kabelsand",
+  "20/120",
+  "Grøftesingel",
+  "Engangsknus",
+  "Soldet jord",
+  "0-32",
+  "0-16",
+];
+
 const baseMaterials = [
   { name: "Sprengstein", color: "#596166" },
   { name: "Jord", color: "#5c6f3a" },
@@ -42,6 +52,10 @@ const customEntry = document.querySelector("#customEntry");
 const customMaterialInput = document.querySelector("#customMaterialInput");
 const cancelCustomMaterial = document.querySelector("#cancelCustomMaterial");
 const overflowMaterials = document.querySelector("#overflowMaterials");
+const deliveryMaterials = document.querySelector("#deliveryMaterials");
+const deliveryEntry = document.querySelector("#deliveryEntry");
+const deliveryMaterialInput = document.querySelector("#deliveryMaterialInput");
+const cancelDeliveryMaterial = document.querySelector("#cancelDeliveryMaterial");
 const logList = document.querySelector("#logList");
 const materialTotals = document.querySelector("#materialTotals");
 const selectedTruckLabel = document.querySelector("#selectedTruckLabel");
@@ -61,10 +75,8 @@ const deletePreviousTruckText = document.querySelector("#deletePreviousTruckText
 const confirmDeletePreviousTruck = document.querySelector("#confirmDeletePreviousTruck");
 const cancelDeletePreviousTruck = document.querySelector("#cancelDeletePreviousTruck");
 const exportDialog = document.querySelector("#exportDialog");
-const sendPdfButton = document.querySelector("#sendPdfButton");
-const sendCsvButton = document.querySelector("#sendCsvButton");
+const sendAllButton = document.querySelector("#sendAllButton");
 const savePdfButton = document.querySelector("#savePdfButton");
-const saveCsvButton = document.querySelector("#saveCsvButton");
 const cancelExportButton = document.querySelector("#cancelExportButton");
 const finishDayDialog = document.querySelector("#finishDayDialog");
 const confirmFinishDay = document.querySelector("#confirmFinishDay");
@@ -177,12 +189,33 @@ customEntry.addEventListener("submit", (event) => {
   customMaterialInput.value = "";
   customEntry.classList.add("is-hidden");
   overflowMaterials.classList.add("is-hidden");
+  deliveryMaterials.classList.add("is-hidden");
+  deliveryEntry.classList.add("is-hidden");
 });
 
 cancelCustomMaterial.addEventListener("click", () => {
   customMaterialInput.value = "";
   customEntry.classList.add("is-hidden");
   overflowMaterials.classList.add("is-hidden");
+});
+
+deliveryEntry.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = normalizeDeliveryMaterial(deliveryMaterialInput.value);
+  if (!name) {
+    deliveryMaterialInput.focus();
+    return;
+  }
+
+  rememberIncomingMaterial(name);
+  addLoad(name, { direction: "in" });
+  deliveryMaterialInput.value = "";
+  closeMaterialDrawer();
+});
+
+cancelDeliveryMaterial.addEventListener("click", () => {
+  deliveryMaterialInput.value = "";
+  deliveryEntry.classList.add("is-hidden");
 });
 
 confirmDeleteMaterial.addEventListener("click", () => {
@@ -308,27 +341,15 @@ exportButton.addEventListener("click", () => {
   exportDialog.classList.remove("is-hidden");
 });
 
-sendPdfButton.addEventListener("click", async () => {
+sendAllButton.addEventListener("click", async () => {
   exportDialog.classList.add("is-hidden");
-  await exportPdf();
-  askFinishDay();
-});
-
-sendCsvButton.addEventListener("click", async () => {
-  exportDialog.classList.add("is-hidden");
-  await exportCsv();
+  await exportAll();
   askFinishDay();
 });
 
 savePdfButton.addEventListener("click", () => {
   exportDialog.classList.add("is-hidden");
   savePdf();
-  askFinishDay();
-});
-
-saveCsvButton.addEventListener("click", () => {
-  exportDialog.classList.add("is-hidden");
-  saveCsv();
   askFinishDay();
 });
 
@@ -379,9 +400,11 @@ function renderMaterials() {
   materialGrid.replaceChildren(
     ...visibleMaterials.map((material) => createMaterialTile(material, "main")),
     createOtherTile(otherMaterial, overflow.length),
+    createDeliveryTile(),
   );
 
   renderOverflowMaterials(overflow);
+  renderDeliveryMaterials();
 }
 
 function renderOverflowMaterials(materials) {
@@ -555,7 +578,7 @@ function renderLogs() {
   const rows = [...state.logs].reverse().map((log) => {
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const item = document.createElement("div");
-    item.className = "log-row";
+    item.className = `log-row${isIncomingLog(log) ? " is-incoming" : ""}`;
 
     const time = document.createElement("span");
     time.className = "log-time";
@@ -567,7 +590,7 @@ function renderLogs() {
 
     const material = document.createElement("span");
     material.className = "log-material";
-    material.textContent = log.material;
+    material.textContent = isIncomingLog(log) ? `+ ${log.material}` : log.material;
 
     const destination = document.createElement("span");
     destination.className = "log-destination";
@@ -595,9 +618,9 @@ function renderLogs() {
 }
 
 function renderMaterialTotals() {
-  const counts = getMaterialCounts();
+  const totals = getMaterialTotals();
 
-  if (!counts.length) {
+  if (!totals.length) {
     materialTotals.replaceChildren();
     return;
   }
@@ -608,9 +631,10 @@ function renderMaterialTotals() {
   const list = document.createElement("div");
   list.className = "totals-grid";
   list.replaceChildren(
-    ...counts.map(([material, count]) => {
+    ...totals.map(({ material, direction, count, tonnes }) => {
       const item = document.createElement("span");
-      item.textContent = `${material}: ${count}`;
+      item.className = direction === "in" ? "is-incoming-total" : "";
+      item.textContent = `${direction === "in" ? "Tilkjørt - " : ""}${material}: ${count} / ${formatTonnes(tonnes)} tonn`;
       return item;
     }),
   );
@@ -637,6 +661,7 @@ function addLoad(material, options = {}) {
     plate: truck.plate,
     truckName: truck.name,
     material,
+    direction: options.direction === "in" ? "in" : "out",
     destination: destinationInput.value.trim(),
     capacity: truck.capacity,
     createdAt: new Date().toISOString(),
@@ -644,8 +669,12 @@ function addLoad(material, options = {}) {
 
   truck.lastUsedAt = new Date().toISOString();
   rememberTruck(truck);
-  rememberCustomMaterial(material);
-  if (options.promote) {
+  if (options.direction === "in") {
+    rememberIncomingMaterial(material);
+  } else {
+    rememberCustomMaterial(material);
+  }
+  if (options.promote && options.direction !== "in") {
     promoteMaterial(material);
   } else if (!state.materialOrderLocked) {
     state.lastSelectedMaterial = material;
@@ -669,7 +698,22 @@ function handleMaterialClick(material) {
 
   customEntry.classList.remove("is-hidden");
   overflowMaterials.classList.remove("is-hidden");
+  deliveryMaterials.classList.add("is-hidden");
+  deliveryEntry.classList.add("is-hidden");
   customMaterialInput.focus();
+}
+
+function toggleDeliveryMaterials() {
+  customEntry.classList.add("is-hidden");
+  overflowMaterials.classList.add("is-hidden");
+  deliveryMaterials.classList.toggle("is-hidden");
+  deliveryEntry.classList.add("is-hidden");
+  deliveryMaterialInput.value = "";
+}
+
+function showDeliveryEntry() {
+  deliveryEntry.classList.remove("is-hidden");
+  deliveryMaterialInput.focus();
 }
 
 async function exportCsv() {
@@ -684,17 +728,13 @@ async function exportCsv() {
   downloadBlob(blob, file.name);
 }
 
-function saveCsv() {
-  downloadBlob(createCsvBlob(), getExportFilename("csv"));
-}
-
 function createCsvBlob() {
   if (!state.logs.length) {
     window.alert("Ingen lass å eksportere ennå.");
     return new Blob([""], { type: "text/csv;charset=utf-8" });
   }
 
-  const header = ["Dato", "Tid", "Operatør", "Maskin", "Bil", "Skiltnr", "Biltype", "Masse", "Kjører til", "Tonn per lass"];
+  const header = ["Dato", "Tid", "Operatør", "Maskin", "Bil", "Skiltnr", "Biltype", "Retning", "Masse", "Kjører til", "Tonn per lass"];
   const rows = state.logs.map((log) => {
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const date = new Date(log.createdAt);
@@ -706,15 +746,51 @@ function createCsvBlob() {
       truck ? getTruckLabel(truck) : getFallbackLogLabel(log),
       log.plate || "",
       formatAxles(truck?.axles ?? "custom"),
+      isIncomingLog(log) ? "Tilkjørt" : "Kjørt ut",
       log.material,
       log.destination || "",
-      String(log.capacity).replace(".", ","),
+      formatCsvNumber(log.capacity),
     ];
   });
 
-  const totals = ["", "", "", "", "SUM", "", "", `${state.logs.length} lass`, "", String(sumTonnes()).replace(".", ",")];
-  const csv = [header, ...rows, totals].map((row) => row.map(escapeCsv).join(";")).join("\n");
+  const totals = ["", "", "", "", "SUM", "", "", "", `${state.logs.length} lass`, "", formatCsvNumber(sumTonnes())];
+  const materialTotals = getMaterialTotals().map(({ material, direction, count, tonnes }) => [
+    "",
+    "",
+    "",
+    "",
+    "SUM PER MASSE",
+    "",
+    "",
+    direction === "in" ? "Tilkjørt" : "Kjørt ut",
+    material,
+    `${count} lass`,
+    formatCsvNumber(tonnes),
+  ]);
+  const spacer = ["", "", "", "", "", "", "", "", "", "", ""];
+  const csv = [header, ...rows, totals, spacer, ...materialTotals].map((row) => row.map(escapeCsv).join(";")).join("\n");
   return new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+}
+
+async function exportAll() {
+  const pdfBlob = createPdfBlob(getReportLines());
+  const csvBlob = createCsvBlob();
+  const pdfFile = new File([pdfBlob], getExportFilename("pdf"), { type: "application/pdf" });
+  const csvFile = new File([csvBlob], getExportFilename("csv"), { type: "text/csv" });
+  const files = [pdfFile, csvFile];
+
+  if (navigator.canShare?.({ files })) {
+    await navigator
+      .share({ files, title: "Lasteliste" })
+      .catch(() => {
+        downloadBlob(pdfBlob, pdfFile.name);
+        downloadBlob(csvBlob, csvFile.name);
+      });
+    return;
+  }
+
+  downloadBlob(pdfBlob, pdfFile.name);
+  downloadBlob(csvBlob, csvFile.name);
 }
 
 async function exportPdf() {
@@ -741,6 +817,7 @@ function loadState() {
       trucks: Array.isArray(saved?.trucks) ? saved.trucks : [],
       logs: Array.isArray(saved?.logs) ? saved.logs : [],
       customMaterials: Array.isArray(saved?.customMaterials) ? saved.customMaterials : [],
+      incomingMaterials: Array.isArray(saved?.incomingMaterials) ? saved.incomingMaterials : [],
       previousTrucks: Array.isArray(saved?.previousTrucks) ? saved.previousTrucks : [],
       deletedMaterials: Array.isArray(saved?.deletedMaterials) ? saved.deletedMaterials : [],
       materialOrder: Array.isArray(saved?.materialOrder) ? saved.materialOrder : [],
@@ -756,6 +833,7 @@ function loadState() {
       trucks: [],
       logs: [],
       customMaterials: [],
+      incomingMaterials: [],
       previousTrucks: [],
       deletedMaterials: [],
       materialOrder: [],
@@ -784,6 +862,13 @@ function normalizePlate(value) {
 
 function normalizeMaterial(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+function normalizeDeliveryMaterial(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function rememberCustomMaterial(material) {
@@ -870,6 +955,46 @@ function createOtherTile(material, overflowCount) {
 
   tile.append(button);
   return tile;
+}
+
+function createDeliveryTile() {
+  const tile = document.createElement("div");
+  tile.className = "material-tile material-tile-incoming";
+
+  const button = document.createElement("button");
+  button.className = "material-button incoming-toggle";
+  button.type = "button";
+  button.textContent = "Tilkjørt +";
+  button.disabled = !state.selectedTruckId;
+  button.addEventListener("click", toggleDeliveryMaterials);
+
+  tile.append(button);
+  return tile;
+}
+
+function renderDeliveryMaterials() {
+  const custom = state.incomingMaterials.filter(
+    (material) => !deliveryBaseMaterials.some((base) => normalizeMaterial(base) === normalizeMaterial(material)),
+  );
+  const materials = [...deliveryBaseMaterials, ...custom];
+  const buttons = materials.map((material) => {
+    const button = document.createElement("button");
+    button.className = `custom-material-button incoming-material-button${confirmedMaterial === material ? " is-confirmed" : ""}`;
+    button.type = "button";
+    button.textContent = material;
+    button.disabled = !state.selectedTruckId;
+    button.addEventListener("click", () => addLoad(material, { direction: "in" }));
+    return button;
+  });
+
+  const customButton = document.createElement("button");
+  customButton.className = "custom-material-button incoming-add-button";
+  customButton.type = "button";
+  customButton.textContent = "+ Egen tilkjørt";
+  customButton.disabled = !state.selectedTruckId;
+  customButton.addEventListener("click", showDeliveryEntry);
+
+  deliveryMaterials.replaceChildren(...buttons, customButton);
 }
 
 function getMassImageClass(material) {
@@ -999,6 +1124,16 @@ function getAllAvailableMaterials() {
 function closeMaterialDrawer() {
   customEntry.classList.add("is-hidden");
   overflowMaterials.classList.add("is-hidden");
+  deliveryMaterials.classList.add("is-hidden");
+  deliveryEntry.classList.add("is-hidden");
+}
+
+function rememberIncomingMaterial(material) {
+  const normalized = normalizeDeliveryMaterial(material);
+  if (!normalized) return;
+  if (deliveryBaseMaterials.some((item) => normalizeMaterial(item) === normalizeMaterial(normalized))) return;
+  if (state.incomingMaterials.some((item) => normalizeMaterial(item) === normalizeMaterial(normalized))) return;
+  state.incomingMaterials.push(normalized);
 }
 
 function cssEscape(value) {
@@ -1121,7 +1256,7 @@ function getExportFilename(extension) {
 
 function getReportLines() {
   const date = new Date().toLocaleDateString("no-NO");
-  const tableHeader = `${"Tid".padEnd(8)} ${"Bil".padEnd(22)} ${"Masse".padEnd(14)} ${"Til".padEnd(15)} ${"Tonn".padStart(6)}`;
+  const tableHeader = `${"Tid".padEnd(8)} ${"Bil".padEnd(20)} ${"Type".padEnd(9)} ${"Masse".padEnd(13)} ${"Til".padEnd(13)} ${"Tonn".padStart(6)}`;
   const lines = [
     "Lasteliste",
     `Dato: ${date}`,
@@ -1136,7 +1271,7 @@ function getReportLines() {
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const tonnes = formatTonnes(log.capacity).padStart(6);
     lines.push(
-      `${formatTime(log.createdAt).padEnd(8)} ${truncate(truck ? getTruckLogLabel(truck) : getFallbackLogLabel(log), 22).padEnd(22)} ${truncate(log.material, 14).padEnd(14)} ${truncate(log.destination || "-", 15).padEnd(15)} ${tonnes}`,
+      `${formatTime(log.createdAt).padEnd(8)} ${truncate(truck ? getTruckLogLabel(truck) : getFallbackLogLabel(log), 20).padEnd(20)} ${getDirectionLabel(log).padEnd(9)} ${truncate(log.material, 13).padEnd(13)} ${truncate(log.destination || "-", 13).padEnd(13)} ${tonnes}`,
     );
   });
 
@@ -1145,7 +1280,9 @@ function getReportLines() {
   lines.push(`Ca. tonn: ${formatTonnes(sumTonnes())}`);
   lines.push("");
   lines.push("Totalt per masse:");
-  getMaterialCounts().forEach(([material, count]) => lines.push(`${material}: ${count}`));
+  getMaterialTotals().forEach(({ material, direction, count, tonnes }) =>
+    lines.push(`${getDirectionLabel({ direction })} - ${material}: ${count} lass - ca. ${formatTonnes(tonnes)} tonn`),
+  );
   return lines;
 }
 
@@ -1239,16 +1376,31 @@ function getFallbackLogLabel(log) {
 }
 
 function getMaterialCount(material) {
-  return state.logs.filter((log) => log.material === material).length;
+  return state.logs.filter((log) => log.material === material && !isIncomingLog(log)).length;
 }
 
 function getMaterialCounts() {
-  const counts = new Map();
+  return getMaterialTotals().map(({ material, count }) => [material, count]);
+}
+
+function getMaterialTotals() {
+  const totals = new Map();
   state.logs.forEach((log) => {
-    counts.set(log.material, (counts.get(log.material) ?? 0) + 1);
+    const direction = isIncomingLog(log) ? "in" : "out";
+    const key = `${direction}:${log.material}`;
+    const saved = totals.get(key) ?? { material: log.material, direction, count: 0, tonnes: 0 };
+    saved.count += 1;
+    saved.tonnes += Number(log.capacity) || 0;
+    totals.set(key, saved);
   });
 
-  return [...counts.entries()].sort((first, second) => second[1] - first[1] || first[0].localeCompare(second[0], "no"));
+  return [...totals.values()].sort(
+    (first, second) =>
+      directionSort(first.direction) - directionSort(second.direction) ||
+      second.count - first.count ||
+      second.tonnes - first.tonnes ||
+      first.material.localeCompare(second.material, "no"),
+  );
 }
 
 function createId() {
@@ -1276,6 +1428,22 @@ function formatTime(value) {
 
 function sumTonnes() {
   return state.logs.reduce((sum, log) => sum + (Number(log.capacity) || 0), 0);
+}
+
+function isIncomingLog(log) {
+  return log.direction === "in";
+}
+
+function getDirectionLabel(log) {
+  return isIncomingLog(log) ? "Tilkjørt" : "Kjørt ut";
+}
+
+function directionSort(direction) {
+  return direction === "out" ? 0 : 1;
+}
+
+function formatCsvNumber(value) {
+  return formatTonnes(value);
 }
 
 function escapeCsv(value) {
