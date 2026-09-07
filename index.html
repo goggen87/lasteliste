@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#1f3b31" />
     <title>Lasteliste</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=52" />
-    <link rel="manifest" href="./manifest.webmanifest?v=52" />
-    <link rel="stylesheet" href="./styles.css?v=52" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=55" />
+    <link rel="manifest" href="./manifest.webmanifest?v=55" />
+    <link rel="stylesheet" href="./styles.css?v=55" />
   </head>
   <body>
     <main class="app-shell">
@@ -111,7 +111,7 @@
             <input id="customMaterialInput" type="text" inputmode="text" placeholder="TØMMER" />
           </label>
           <div class="custom-entry-actions">
-            <button class="primary-button" id="saveCustomMaterial" type="submit">Logg</button>
+            <button class="primary-button" id="saveCustomMaterial" type="submit">Legg til</button>
             <button class="secondary-button" id="cancelCustomMaterial" type="button">Avbryt</button>
           </div>
         </form>
@@ -123,7 +123,7 @@
             <input id="deliveryMaterialInput" type="text" inputmode="text" placeholder="KABELSAND" />
           </label>
           <div class="custom-entry-actions">
-            <button class="primary-button" id="saveDeliveryMaterial" type="submit">Logg inn</button>
+            <button class="primary-button" id="saveDeliveryMaterial" type="submit">Legg til</button>
             <button class="secondary-button" id="cancelDeliveryMaterial" type="button">Avbryt</button>
           </div>
         </form>
@@ -139,6 +139,14 @@
         </div>
         <div class="log-table" id="logList"></div>
         <div class="material-totals" id="materialTotals"></div>
+      </section>
+
+      <section class="panel archive-panel">
+        <div class="section-heading">
+          <h2>Tidligere lastelister</h2>
+          <p>Siste 7 PDF</p>
+        </div>
+        <div class="archive-list" id="archiveList"></div>
       </section>
     </main>
 
@@ -191,6 +199,7 @@
       </div>
     </div>
 
-    <script src="./app.js?v=52" type="module"></script>
+
+    <script src="./app.js?v=55" type="module"></script>
   </body>
 </html>

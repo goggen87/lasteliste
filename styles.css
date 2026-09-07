@@ -937,6 +937,41 @@ button:focus-visible {
   color: var(--incoming-strong);
 }
 
+
+.archive-panel {
+  margin-bottom: 8px;
+}
+
+.archive-list {
+  display: grid;
+  gap: 8px;
+}
+
+.archive-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  border: 1px solid rgba(39, 101, 79, 0.16);
+  border-radius: 8px;
+  background: #fbfcfb;
+  padding: 8px 10px;
+}
+
+.archive-item span {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.archive-open {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
 .confirm-backdrop {
   position: fixed;
   inset: 0;
@@ -967,6 +1002,8 @@ button:focus-visible {
   color: var(--muted);
   font-weight: 700;
 }
+
+
 
 .confirm-actions {
   display: grid;

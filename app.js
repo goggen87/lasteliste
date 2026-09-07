@@ -1,4 +1,5 @@
 const STORAGE_KEY = "lasteliste:v1";
+const MAX_ARCHIVED_REPORTS = 7;
 const MAX_VISIBLE_MATERIALS = 6;
 
 const deliveryBaseMaterials = [
@@ -58,6 +59,7 @@ const deliveryMaterialInput = document.querySelector("#deliveryMaterialInput");
 const cancelDeliveryMaterial = document.querySelector("#cancelDeliveryMaterial");
 const logList = document.querySelector("#logList");
 const materialTotals = document.querySelector("#materialTotals");
+const archiveList = document.querySelector("#archiveList");
 const selectedTruckLabel = document.querySelector("#selectedTruckLabel");
 const totalLoads = document.querySelector("#totalLoads");
 const totalTonnes = document.querySelector("#totalTonnes");
@@ -357,21 +359,24 @@ cancelExportButton.addEventListener("click", () => {
   exportDialog.classList.add("is-hidden");
 });
 
-confirmFinishDay.addEventListener("click", () => {
+confirmFinishDay.addEventListener("click", async () => {
   finishDayDialog.classList.add("is-hidden");
-  finishDay();
+  await finishDay();
 });
 
 cancelFinishDay.addEventListener("click", () => {
   finishDayDialog.classList.add("is-hidden");
 });
 
-clearButton.addEventListener("click", () => {
+
+clearButton.addEventListener("click", async () => {
   if (!state.logs.length && !state.trucks.length) return;
   const confirmed = window.confirm("Vil du rydde dagens biler og logg?");
   if (!confirmed) return;
-  finishDay();
+  await finishDay();
 });
+
+
 
 function render() {
   renderMaterials();
@@ -379,6 +384,7 @@ function render() {
   renderPreviousTrucks();
   renderLogs();
   renderMaterialTotals();
+  renderArchiveList();
   renderSummary();
 }
 
@@ -594,7 +600,7 @@ function renderLogs() {
 
     const destination = document.createElement("span");
     destination.className = "log-destination";
-    destination.textContent = log.destination || "-";
+    destination.textContent = getDestinationLabel(log);
 
     const tonnes = document.createElement("span");
     tonnes.className = "log-tonnes";
@@ -662,7 +668,7 @@ function addLoad(material, options = {}) {
     truckName: truck.name,
     material,
     direction: options.direction === "in" ? "in" : "out",
-    destination: destinationInput.value.trim(),
+    destination: options.direction === "in" ? "Tilkjørt" : destinationInput.value.trim(),
     capacity: truck.capacity,
     createdAt: new Date().toISOString(),
   });
@@ -748,7 +754,7 @@ function createCsvBlob() {
       formatAxles(truck?.axles ?? "custom"),
       isIncomingLog(log) ? "Tilkjørt" : "Kjørt ut",
       log.material,
-      log.destination || "",
+      getDestinationLabel(log),
       formatCsvNumber(log.capacity),
     ];
   });
@@ -818,6 +824,7 @@ function loadState() {
       logs: Array.isArray(saved?.logs) ? saved.logs : [],
       customMaterials: Array.isArray(saved?.customMaterials) ? saved.customMaterials : [],
       incomingMaterials: Array.isArray(saved?.incomingMaterials) ? saved.incomingMaterials : [],
+      archivedReports: Array.isArray(saved?.archivedReports) ? saved.archivedReports : [],
       previousTrucks: Array.isArray(saved?.previousTrucks) ? saved.previousTrucks : [],
       deletedMaterials: Array.isArray(saved?.deletedMaterials) ? saved.deletedMaterials : [],
       materialOrder: Array.isArray(saved?.materialOrder) ? saved.materialOrder : [],
@@ -834,6 +841,7 @@ function loadState() {
       logs: [],
       customMaterials: [],
       incomingMaterials: [],
+      archivedReports: [],
       previousTrucks: [],
       deletedMaterials: [],
       materialOrder: [],
@@ -990,7 +998,7 @@ function renderDeliveryMaterials() {
   const customButton = document.createElement("button");
   customButton.className = "custom-material-button incoming-add-button";
   customButton.type = "button";
-  customButton.textContent = "+ Egen tilkjørt";
+  customButton.textContent = "+ Legg til ny";
   customButton.disabled = !state.selectedTruckId;
   customButton.addEventListener("click", showDeliveryEntry);
 
@@ -1224,7 +1232,8 @@ function getTruckKey(truck) {
   return truck.plate ? `plate:${truck.plate}` : truck.name ? `name:${truck.name.trim().toLowerCase()}` : "";
 }
 
-function finishDay() {
+async function finishDay() {
+  await archiveCurrentReport();
   state.trucks.forEach((truck) => rememberTruck({ ...truck, lastUsedAt: truck.lastUsedAt ?? new Date().toISOString() }));
   state.trucks = [];
   state.logs = [];
@@ -1239,6 +1248,87 @@ function askFinishDay() {
   finishDayDialog.classList.remove("is-hidden");
 }
 
+function renderArchiveList() {
+  if (!archiveList) return;
+
+  const reports = state.archivedReports ?? [];
+  if (!reports.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "Ingen lagrede lastelister ennå.";
+    archiveList.replaceChildren(empty);
+    return;
+  }
+
+  archiveList.replaceChildren(
+    ...reports.map((report) => {
+      const item = document.createElement("div");
+      item.className = "archive-item";
+
+      const info = document.createElement("span");
+      info.textContent = `${report.label} - ${report.loadCount} lass / ${formatTonnes(report.tonnes)} tonn`;
+
+      const button = document.createElement("button");
+      button.className = "secondary-button archive-open";
+      button.type = "button";
+      button.textContent = "PDF";
+      button.addEventListener("click", () => openArchivedReport(report.id));
+
+      item.append(info, button);
+      return item;
+    }),
+  );
+}
+
+async function archiveCurrentReport() {
+  if (!state.logs.length) return;
+
+  const blob = createPdfBlob(getReportLines());
+  const dataUrl = await blobToDataUrl(blob);
+  const dateKey = getReportDateKey();
+  const report = {
+    id: dateKey,
+    label: formatReportDateLabel(new Date()),
+    filename: getExportFilename("pdf"),
+    loadCount: state.logs.length,
+    tonnes: sumTonnes(),
+    createdAt: new Date().toISOString(),
+    dataUrl,
+  };
+
+  const withoutSameDay = (state.archivedReports ?? []).filter((saved) => saved.id !== report.id);
+  state.archivedReports = [report, ...withoutSameDay]
+    .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt))
+    .slice(0, MAX_ARCHIVED_REPORTS);
+  persist();
+}
+
+function openArchivedReport(reportId) {
+  const report = (state.archivedReports ?? []).find((saved) => saved.id === reportId);
+  if (!report) return;
+  downloadBlob(dataUrlToBlob(report.dataUrl), report.filename);
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [header, data] = dataUrl.split(",");
+  const mime = header.match(/data:(.*?);base64/)?.[1] || "application/pdf";
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -1251,7 +1341,15 @@ function downloadBlob(blob, filename) {
 }
 
 function getExportFilename(extension) {
-  return `lasteliste-${new Date().toISOString().slice(0, 10)}.${extension}`;
+  return `lasteliste-${getReportDateKey()}.${extension}`;
+}
+
+function getReportDateKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatReportDateLabel(date) {
+  return capitalize(date.toLocaleDateString("no-NO", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }));
 }
 
 function getReportLines() {
@@ -1271,7 +1369,7 @@ function getReportLines() {
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const tonnes = formatTonnes(log.capacity).padStart(6);
     lines.push(
-      `${formatTime(log.createdAt).padEnd(8)} ${truncate(truck ? getTruckLogLabel(truck) : getFallbackLogLabel(log), 20).padEnd(20)} ${getDirectionLabel(log).padEnd(9)} ${truncate(log.material, 13).padEnd(13)} ${truncate(log.destination || "-", 13).padEnd(13)} ${tonnes}`,
+      `${formatTime(log.createdAt).padEnd(8)} ${truncate(truck ? getTruckLogLabel(truck) : getFallbackLogLabel(log), 20).padEnd(20)} ${getDirectionLabel(log).padEnd(9)} ${truncate(log.material, 13).padEnd(13)} ${truncate(getDestinationLabel(log), 13).padEnd(13)} ${tonnes}`,
     );
   });
 
@@ -1428,6 +1526,10 @@ function formatTime(value) {
 
 function sumTonnes() {
   return state.logs.reduce((sum, log) => sum + (Number(log.capacity) || 0), 0);
+}
+
+function getDestinationLabel(log) {
+  return isIncomingLog(log) ? "Tilkjørt" : log.destination || "-";
 }
 
 function isIncomingLog(log) {
