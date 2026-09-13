@@ -49,6 +49,7 @@ const previousTrucksPanel = document.querySelector("#previousTrucksPanel");
 const materialGrid = document.querySelector("#materialGrid");
 const organizeButton = document.querySelector("#organizeButton");
 const destinationInput = document.querySelector("#destinationInput");
+const destinationSuggestions = document.querySelector("#destinationSuggestions");
 const customEntry = document.querySelector("#customEntry");
 const customMaterialInput = document.querySelector("#customMaterialInput");
 const cancelCustomMaterial = document.querySelector("#cancelCustomMaterial");
@@ -80,6 +81,12 @@ const exportDialog = document.querySelector("#exportDialog");
 const sendAllButton = document.querySelector("#sendAllButton");
 const savePdfButton = document.querySelector("#savePdfButton");
 const cancelExportButton = document.querySelector("#cancelExportButton");
+const editLogDialog = document.querySelector("#editLogDialog");
+const editLogForm = document.querySelector("#editLogForm");
+const editLogTruck = document.querySelector("#editLogTruck");
+const editLogMaterial = document.querySelector("#editLogMaterial");
+const editLogDestination = document.querySelector("#editLogDestination");
+const cancelEditLog = document.querySelector("#cancelEditLog");
 const finishDayDialog = document.querySelector("#finishDayDialog");
 const confirmFinishDay = document.querySelector("#confirmFinishDay");
 const cancelFinishDay = document.querySelector("#cancelFinishDay");
@@ -88,10 +95,12 @@ let pendingDeleteMaterial = null;
 let draggedMaterialName = null;
 let pointerDrag = null;
 let lastTruckTap = { id: null, at: 0 };
+let lastLogTap = { id: null, at: 0 };
 let suppressMaterialClick = null;
 let confirmedMaterial = null;
 let isOrganizing = false;
 let editingTruckId = null;
+let editingLogId = null;
 let pendingDeletePreviousTruckKey = null;
 
 operatorInput.value = state.operatorName;
@@ -177,6 +186,14 @@ crewForm.addEventListener("input", () => {
 destinationInput.addEventListener("input", () => {
   state.destinationText = destinationInput.value.trim();
   persist();
+  renderDestinationSuggestions();
+});
+
+destinationInput.addEventListener("focus", renderDestinationSuggestions);
+
+document.addEventListener("click", (event) => {
+  if (event.target === destinationInput || destinationSuggestions.contains(event.target)) return;
+  destinationSuggestions.classList.add("is-hidden");
 });
 
 customEntry.addEventListener("submit", (event) => {
@@ -359,6 +376,13 @@ cancelExportButton.addEventListener("click", () => {
   exportDialog.classList.add("is-hidden");
 });
 
+editLogForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveEditedLog();
+});
+
+cancelEditLog.addEventListener("click", closeEditLogDialog);
+
 confirmFinishDay.addEventListener("click", async () => {
   finishDayDialog.classList.add("is-hidden");
   await finishDay();
@@ -385,6 +409,7 @@ function render() {
   renderLogs();
   renderMaterialTotals();
   renderArchiveList();
+  renderDestinationSuggestions();
   renderSummary();
 }
 
@@ -439,7 +464,17 @@ function renderTrucks() {
   }
 
   const selected = state.trucks.find((truck) => truck.id === state.selectedTruckId);
-  selectedTruckLabel.textContent = selected ? getTruckLogLabel(selected) : "Velg bil først";
+  selectedTruckLabel.replaceChildren();
+  if (selected) {
+    const eyebrow = document.createElement("span");
+    eyebrow.className = "selected-truck-label";
+    eyebrow.textContent = "Valgt bil";
+    const name = document.createElement("span");
+    name.textContent = getTruckLogLabel(selected);
+    selectedTruckLabel.append(eyebrow, name);
+  } else {
+    selectedTruckLabel.textContent = "Velg bil først";
+  }
   selectedTruckLabel.classList.toggle("is-actionable", !selected);
   if (selected) {
     selectedTruckLabel.removeAttribute("role");
@@ -585,6 +620,15 @@ function renderLogs() {
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const item = document.createElement("div");
     item.className = `log-row${isIncomingLog(log) ? " is-incoming" : ""}`;
+    item.title = "Dobbelttrykk for å redigere lasset";
+    item.addEventListener("click", () => {
+      const now = Date.now();
+      const isDoubleTap = lastLogTap.id === log.id && now - lastLogTap.at < 450;
+      lastLogTap = { id: log.id, at: now };
+      if (isDoubleTap) {
+        openEditLogDialog(log.id);
+      }
+    });
 
     const time = document.createElement("span");
     time.className = "log-time";
@@ -611,7 +655,8 @@ function renderLogs() {
     remove.type = "button";
     remove.setAttribute("aria-label", "Slett lass");
     remove.textContent = "x";
-    remove.addEventListener("click", () => {
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
       state.logs = state.logs.filter((itemLog) => itemLog.id !== log.id);
       persistAndRender();
     });
@@ -621,6 +666,65 @@ function renderLogs() {
   });
 
   logList.replaceChildren(header, ...rows);
+}
+
+
+function openEditLogDialog(logId) {
+  const log = state.logs.find((item) => item.id === logId);
+  if (!log) return;
+
+  editingLogId = log.id;
+  editLogTruck.replaceChildren(
+    ...state.trucks.map((truck) => {
+      const option = document.createElement("option");
+      option.value = truck.id;
+      option.textContent = getTruckLogLabel(truck);
+      option.selected = truck.id === log.truckId;
+      return option;
+    }),
+  );
+  editLogMaterial.value = log.material;
+  editLogDestination.value = getDestinationLabel(log);
+  editLogDestination.disabled = isIncomingLog(log);
+  editLogDialog.classList.remove("is-hidden");
+  editLogTruck.focus();
+}
+
+function saveEditedLog() {
+  const log = state.logs.find((item) => item.id === editingLogId);
+  if (!log) return;
+
+  const truck = state.trucks.find((item) => item.id === editLogTruck.value);
+  if (truck) {
+    log.truckId = truck.id;
+    log.plate = truck.plate;
+    log.truckName = truck.name;
+  }
+
+  const material = log.direction === "in" ? normalizeDeliveryMaterial(editLogMaterial.value) : normalizeMaterial(editLogMaterial.value);
+  if (material) {
+    log.material = material;
+    if (log.direction === "in") {
+      rememberIncomingMaterial(material);
+    } else {
+      rememberCustomMaterial(material);
+    }
+  }
+
+  if (log.direction === "in") {
+    log.destination = "Tilkjørt";
+  } else {
+    log.destination = editLogDestination.value.trim();
+    rememberDestination(log.destination, log.direction);
+  }
+
+  closeEditLogDialog();
+  persistAndRender();
+}
+
+function closeEditLogDialog() {
+  editingLogId = null;
+  editLogDialog.classList.add("is-hidden");
 }
 
 function renderMaterialTotals() {
@@ -648,6 +752,64 @@ function renderMaterialTotals() {
   materialTotals.replaceChildren(title, list);
 }
 
+
+function renderDestinationSuggestions() {
+  if (!destinationSuggestions || document.activeElement !== destinationInput) return;
+
+  const query = destinationInput.value.trim().toLowerCase();
+  const matches = (state.destinationHistory ?? [])
+    .filter((place) => !query || place.toLowerCase().startsWith(query))
+    .slice(0, 6);
+
+  if (!matches.length) {
+    destinationSuggestions.classList.add("is-hidden");
+    destinationSuggestions.replaceChildren();
+    return;
+  }
+
+  destinationSuggestions.replaceChildren(
+    ...matches.map((place) => {
+      const item = document.createElement("div");
+      item.className = "destination-suggestion";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = place;
+      button.addEventListener("click", () => {
+        destinationInput.value = place;
+        state.destinationText = place;
+        destinationSuggestions.classList.add("is-hidden");
+        persist();
+      });
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "destination-remove";
+      remove.setAttribute("aria-label", `Slett ${place} fra forslag`);
+      remove.textContent = "x";
+      remove.addEventListener("click", () => {
+        state.destinationHistory = (state.destinationHistory ?? []).filter((saved) => saved !== place);
+        persistAndRender();
+        destinationInput.focus();
+      });
+
+      item.append(button, remove);
+      return item;
+    }),
+  );
+  destinationSuggestions.classList.remove("is-hidden");
+}
+
+function rememberDestination(destination, direction) {
+  const place = String(destination ?? "").trim();
+  if (direction === "in" || !place) return;
+
+  const withoutDuplicate = (state.destinationHistory ?? []).filter(
+    (saved) => saved.toLowerCase() !== place.toLowerCase(),
+  );
+  state.destinationHistory = [place, ...withoutDuplicate].slice(0, 20);
+}
+
 function renderSummary() {
   const tonneSum = state.logs.reduce((sum, log) => sum + (Number(log.capacity) || 0), 0);
   totalLoads.textContent = state.logs.length;
@@ -661,6 +823,8 @@ function addLoad(material, options = {}) {
   const truck = state.trucks.find((item) => item.id === state.selectedTruckId);
   if (!truck) return;
 
+  const destination = options.direction === "in" ? "Tilkjørt" : destinationInput.value.trim();
+
   state.logs.push({
     id: createId(),
     truckId: truck.id,
@@ -668,10 +832,12 @@ function addLoad(material, options = {}) {
     truckName: truck.name,
     material,
     direction: options.direction === "in" ? "in" : "out",
-    destination: options.direction === "in" ? "Tilkjørt" : destinationInput.value.trim(),
+    destination,
     capacity: truck.capacity,
     createdAt: new Date().toISOString(),
   });
+
+  rememberDestination(destination, options.direction);
 
   truck.lastUsedAt = new Date().toISOString();
   rememberTruck(truck);
@@ -833,6 +999,7 @@ function loadState() {
       operatorName: saved?.operatorName ?? "",
       machineName: saved?.machineName ?? "",
       destinationText: saved?.destinationText ?? "",
+      destinationHistory: Array.isArray(saved?.destinationHistory) ? saved.destinationHistory : [],
       selectedTruckId: saved?.selectedTruckId ?? null,
     };
   } catch {
@@ -850,6 +1017,7 @@ function loadState() {
       operatorName: "",
       machineName: "",
       destinationText: "",
+      destinationHistory: [],
       selectedTruckId: null,
     };
   }

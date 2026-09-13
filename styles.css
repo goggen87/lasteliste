@@ -205,6 +205,7 @@ h2 {
 
 .selected-truck {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-width: min(58%, 260px);
@@ -224,6 +225,16 @@ h2 {
 
 .section-heading .selected-truck {
   text-align: center;
+}
+
+.selected-truck-label {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .selected-truck.is-actionable {
@@ -252,6 +263,10 @@ label {
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 700;
+}
+
+.destination-field {
+  position: relative;
 }
 
 .form-message {
@@ -678,6 +693,62 @@ button:focus-visible {
   font-weight: 800;
 }
 
+.destination-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(39, 101, 79, 0.18);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 10px 24px rgba(28, 49, 39, 0.16);
+  padding: 6px;
+}
+
+.destination-suggestions.is-hidden {
+  display: none;
+}
+
+.destination-suggestion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  align-items: stretch;
+  min-height: 38px;
+  border-radius: 7px;
+  background: #f7faf7;
+  overflow: hidden;
+}
+
+.destination-suggestion > button {
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.destination-suggestion > button:first-child {
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.destination-remove {
+  color: rgba(157, 47, 47, 0.62) !important;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.destination-remove:hover,
+.destination-remove:focus-visible {
+  background: #f4dfdd;
+  color: var(--danger) !important;
+}
+
 .material-button.is-confirmed {
   animation: material-confirm 2100ms ease-out;
 }
@@ -1004,6 +1075,22 @@ button:focus-visible {
 }
 
 
+
+
+.edit-log-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.edit-log-form input:disabled {
+  background: #edf4ef;
+  color: var(--muted);
+}
+
+.log-row:not(.log-header) {
+  cursor: pointer;
+}
 
 .confirm-actions {
   display: grid;

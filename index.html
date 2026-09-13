@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#1f3b31" />
     <title>Lasteliste</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=55" />
-    <link rel="manifest" href="./manifest.webmanifest?v=55" />
-    <link rel="stylesheet" href="./styles.css?v=55" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=58" />
+    <link rel="manifest" href="./manifest.webmanifest?v=58" />
+    <link rel="stylesheet" href="./styles.css?v=58" />
   </head>
   <body>
     <main class="app-shell">
@@ -102,7 +102,8 @@
         </div>
         <label class="destination-field">
           Kjører til
-          <input id="destinationInput" type="text" inputmode="text" placeholder="Tipp, kunde, område ..." />
+          <input id="destinationInput" type="text" inputmode="text" placeholder="Tipp, kunde, område ..." autocomplete="off" />
+          <div class="destination-suggestions is-hidden" id="destinationSuggestions"></div>
         </label>
         <div class="material-grid" id="materialGrid" aria-label="Velg masse"></div>
         <form class="custom-entry is-hidden" id="customEntry" autocomplete="off">
@@ -176,6 +177,32 @@
       </div>
     </div>
 
+
+    <div class="confirm-backdrop is-hidden" id="editLogDialog" role="dialog" aria-modal="true" aria-labelledby="editLogTitle">
+      <div class="confirm-box edit-log-box">
+        <h2 id="editLogTitle">Rediger lass</h2>
+        <p>Tidspunkt og tonn beholdes.</p>
+        <form class="edit-log-form" id="editLogForm" autocomplete="off">
+          <label>
+            Bil
+            <select id="editLogTruck"></select>
+          </label>
+          <label>
+            Type masse
+            <input id="editLogMaterial" type="text" inputmode="text" />
+          </label>
+          <label>
+            Kjører til
+            <input id="editLogDestination" type="text" inputmode="text" />
+          </label>
+          <div class="confirm-actions">
+            <button class="primary-button" id="saveEditLog" type="submit">Lagre</button>
+            <button class="secondary-button" id="cancelEditLog" type="button">Avbryt</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="confirm-backdrop is-hidden" id="exportDialog" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
       <div class="confirm-box">
         <h2 id="exportTitle">Eksporter dagen</h2>
@@ -200,6 +227,6 @@
     </div>
 
 
-    <script src="./app.js?v=55" type="module"></script>
+    <script src="./app.js?v=58" type="module"></script>
   </body>
 </html>
