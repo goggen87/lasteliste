@@ -573,7 +573,7 @@ function renderPreviousTrucks() {
       button.className = "previous-truck";
       button.type = "button";
       button.textContent = `${getTruckLabel(truck)}${truck.plate ? ` · ${truck.plate}` : ""}${active ? " ✓" : ""}`;
-      button.addEventListener("click", () => togglePreviousTruckForToday(truck));
+      button.addEventListener("click", () => addPreviousTruck(truck));
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "delete-previous-truck";
@@ -1342,18 +1342,14 @@ function clearTruckForm() {
   formMessage.textContent = "";
 }
 
-function togglePreviousTruckForToday(previousTruck) {
-  const existing = state.trucks.find((truck) => isSameTruck(previousTruck, truck));
+function addPreviousTruck(previousTruck) {
+  const existing = state.trucks.find((truck) => {
+    if (previousTruck.plate && truck.plate === previousTruck.plate) return true;
+    return !previousTruck.plate && truck.name?.trim().toLowerCase() === previousTruck.name?.trim().toLowerCase();
+  });
 
   if (existing) {
-    state.trucks = state.trucks.filter((truck) => truck.id !== existing.id);
-    if (state.selectedTruckId === existing.id) {
-      state.selectedTruckId = state.trucks[0]?.id ?? null;
-    }
-    if (editingTruckId === existing.id) {
-      clearTruckForm();
-      truckForm.classList.add("is-collapsed");
-    }
+    state.selectedTruckId = existing.id;
   } else {
     const truck = {
       id: createId(),
@@ -1371,11 +1367,6 @@ function togglePreviousTruckForToday(previousTruck) {
 
   truckForm.classList.add("is-collapsed");
   persistAndRender();
-}
-
-function isSameTruck(first, second) {
-  if (first.plate && second.plate) return first.plate === second.plate;
-  return first.name?.trim().toLowerCase() === second.name?.trim().toLowerCase();
 }
 
 function rememberTruck(truck) {
@@ -1518,21 +1509,7 @@ function downloadBlob(blob, filename) {
 }
 
 function getExportFilename(extension) {
-  const operator = getFilenamePart(state.operatorName);
-  return `lasteliste${operator ? `-${operator}` : ""}-${getReportDateKey()}.${extension}`;
-}
-
-function getFilenamePart(value) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/æ/g, "ae")
-    .replace(/ø/g, "o")
-    .replace(/å/g, "a")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return `lasteliste-${getReportDateKey()}.${extension}`;
 }
 
 function getReportDateKey() {
