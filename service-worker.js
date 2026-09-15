@@ -1,4 +1,4 @@
-const CACHE_NAME = "lasteliste-cache-v58";
+const CACHE_NAME = "lasteliste-cache-v68";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,6 +15,7 @@ const ASSETS = [
   "./assets/masser/jord.jpg",
   "./assets/masser/leire.jpg",
   "./assets/masser/sand.jpg",
+  "./assets/masser/blandet-masse.png",
 ];
 
 self.addEventListener("install", (event) => {

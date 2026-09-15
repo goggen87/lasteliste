@@ -3,23 +3,27 @@ const MAX_ARCHIVED_REPORTS = 7;
 const MAX_VISIBLE_MATERIALS = 6;
 
 const deliveryBaseMaterials = [
-  "Kabelsand",
-  "20/120",
-  "Grøftesingel",
-  "Engangsknus",
-  "Soldet jord",
-  "0-32",
-  "0-16",
+  "Sollet jord",
+  "Maskinsand 0-4 mm",
+  "Maskinsand 0-8 mm",
+  "Singel 4-8 mm",
+  "Singel 8-16 mm",
+  "Pukk 16-32 mm",
+  "Pukk 32-64 mm",
+  "Pukk 20-120 mm",
+  "Grus 0-16 mm",
+  "Grus 0-32 mm",
+  "Engangsknust 0-63 mm",
+  "Engangsknust 0-150 mm",
 ];
 
 const baseMaterials = [
   { name: "Sprengstein", color: "#596166" },
   { name: "Jord", color: "#5c6f3a" },
-  { name: "Leire", color: "#8a704d" },
+  { name: "Blandet masse", color: "#565f58" },
   { name: "Stein", color: "#6f7880" },
   { name: "Asfalt", color: "#33383b" },
   { name: "Forurenset", color: "#8b6c3f" },
-  { name: "Sand", color: "#b3833d" },
   { name: "Annet", color: "#27654f" },
 ];
 
@@ -85,7 +89,9 @@ const editLogDialog = document.querySelector("#editLogDialog");
 const editLogForm = document.querySelector("#editLogForm");
 const editLogTruck = document.querySelector("#editLogTruck");
 const editLogMaterial = document.querySelector("#editLogMaterial");
+const editLogMaterialSuggestions = document.querySelector("#editLogMaterialSuggestions");
 const editLogDestination = document.querySelector("#editLogDestination");
+const editLogDestinationSuggestions = document.querySelector("#editLogDestinationSuggestions");
 const cancelEditLog = document.querySelector("#cancelEditLog");
 const finishDayDialog = document.querySelector("#finishDayDialog");
 const confirmFinishDay = document.querySelector("#confirmFinishDay");
@@ -180,6 +186,7 @@ selectedTruckLabel.addEventListener("keydown", (event) => {
 crewForm.addEventListener("input", () => {
   state.operatorName = operatorInput.value.trim();
   state.machineName = machineInput.value.trim();
+  if (state.operatorName) operatorInput.classList.remove("is-required-warning");
   persist();
 });
 
@@ -342,6 +349,7 @@ function addTruckFromForm() {
       lastUsedAt: new Date().toISOString(),
     };
     state.trucks.push(truck);
+    reattachLogsToTruck(truck);
     state.selectedTruckId = truck.id;
     rememberTruck(truck);
   }
@@ -361,12 +369,14 @@ exportButton.addEventListener("click", () => {
 });
 
 sendAllButton.addEventListener("click", async () => {
+  if (!ensureOperatorName()) return;
   exportDialog.classList.add("is-hidden");
   await exportAll();
   askFinishDay();
 });
 
 savePdfButton.addEventListener("click", () => {
+  if (!ensureOperatorName()) return;
   exportDialog.classList.add("is-hidden");
   savePdf();
   askFinishDay();
@@ -375,6 +385,16 @@ savePdfButton.addEventListener("click", () => {
 cancelExportButton.addEventListener("click", () => {
   exportDialog.classList.add("is-hidden");
 });
+
+function ensureOperatorName() {
+  if (operatorInput.value.trim()) return true;
+
+  exportDialog.classList.add("is-hidden");
+  operatorInput.classList.add("is-required-warning");
+  operatorInput.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.setTimeout(() => operatorInput.focus(), 250);
+  return false;
+}
 
 editLogForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -468,8 +488,9 @@ function renderTrucks() {
   if (selected) {
     const eyebrow = document.createElement("span");
     eyebrow.className = "selected-truck-label";
-    eyebrow.textContent = "Valgt bil";
+    eyebrow.textContent = "VALGT BIL";
     const name = document.createElement("span");
+    name.className = "selected-truck-name";
     name.textContent = getTruckLogLabel(selected);
     selectedTruckLabel.append(eyebrow, name);
   } else {
@@ -507,7 +528,7 @@ function renderTrucks() {
 
   truckList.replaceChildren(
     ...state.trucks.map((truck) => {
-      const loads = state.logs.filter((log) => log.truckId === truck.id).length;
+      const loads = getTruckLoadCount(truck);
       const card = document.createElement("div");
       card.className = `truck-card${truck.id === state.selectedTruckId ? " is-selected" : ""}`;
       card.title = `${getTruckLabel(truck)} - ${loads} lass. Dobbelttrykk for å redigere.`;
@@ -573,7 +594,7 @@ function renderPreviousTrucks() {
       button.className = "previous-truck";
       button.type = "button";
       button.textContent = `${getTruckLabel(truck)}${truck.plate ? ` · ${truck.plate}` : ""}${active ? " ✓" : ""}`;
-      button.addEventListener("click", () => addPreviousTruck(truck));
+      button.addEventListener("click", () => togglePreviousTruckForToday(truck));
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "delete-previous-truck";
@@ -684,10 +705,69 @@ function openEditLogDialog(logId) {
     }),
   );
   editLogMaterial.value = log.material;
+  renderEditLogMaterialSuggestions(log);
   editLogDestination.value = getDestinationLabel(log);
+  renderEditLogDestinationSuggestions(log);
   editLogDestination.disabled = isIncomingLog(log);
   editLogDialog.classList.remove("is-hidden");
   editLogTruck.focus();
+}
+
+function renderEditLogMaterialSuggestions(log) {
+  const suggestions = getEditLogMaterialSuggestions(log);
+  editLogMaterialSuggestions.replaceChildren(
+    ...suggestions.map((material) => {
+      const option = document.createElement("option");
+      option.value = material;
+      return option;
+    }),
+  );
+}
+
+function getEditLogMaterialSuggestions(log) {
+  const current = String(log?.material ?? "").trim();
+  const materials = isIncomingLog(log)
+    ? [...deliveryBaseMaterials, ...state.incomingMaterials, current]
+    : [
+        ...baseMaterials.filter((material) => material.name !== "Annet" && !isDeletedMaterial(material.name)).map((material) => material.name),
+        ...state.customMaterials.filter((material) => !isDeletedMaterial(material)),
+        current,
+      ];
+  const seen = new Set();
+  return materials
+    .map((material) => String(material ?? "").trim())
+    .filter((material) => {
+      if (!material) return false;
+      const key = normalizeMaterial(material);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function renderEditLogDestinationSuggestions(log) {
+  const suggestions = isIncomingLog(log) ? ["Tilkjørt"] : getDestinationSuggestions();
+  editLogDestinationSuggestions.replaceChildren(
+    ...suggestions.map((place) => {
+      const option = document.createElement("option");
+      option.value = place;
+      return option;
+    }),
+  );
+}
+
+function getDestinationSuggestions() {
+  const seen = new Set();
+  return (state.destinationHistory ?? [])
+    .map((place) => String(place ?? "").trim())
+    .filter((place) => {
+      if (!place) return false;
+      const key = place.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 20);
 }
 
 function saveEditedLog() {
@@ -853,6 +933,7 @@ function addLoad(material, options = {}) {
   }
   closeMaterialDrawer();
   confirmedMaterial = material;
+  selectNextTruck(truck.id);
   persistAndRender();
   window.setTimeout(() => {
     document
@@ -860,6 +941,16 @@ function addLoad(material, options = {}) {
       .forEach((button) => button.classList.remove("is-confirmed"));
     if (confirmedMaterial === material) confirmedMaterial = null;
   }, 2200);
+}
+
+function selectNextTruck(currentTruckId) {
+  if (state.trucks.length < 2) return;
+
+  const currentIndex = state.trucks.findIndex((truck) => truck.id === currentTruckId);
+  if (currentIndex === -1) return;
+
+  const nextIndex = (currentIndex + 1) % state.trucks.length;
+  state.selectedTruckId = state.trucks[nextIndex].id;
 }
 
 function handleMaterialClick(material) {
@@ -1122,10 +1213,9 @@ function createOtherTile(material, overflowCount) {
   tile.className = "material-tile material-tile-other";
 
   const button = document.createElement("button");
-  button.className = "material-button";
+  button.className = "material-button custom-toggle";
   button.type = "button";
-  button.textContent = overflowCount ? `Annet (${overflowCount})` : "Annet";
-  button.style.background = material.color;
+  button.textContent = overflowCount ? `Egendefinert ... (${overflowCount})` : "Egendefinert ...";
   button.disabled = !state.selectedTruckId;
   button.addEventListener("click", () => handleMaterialClick("Annet"));
 
@@ -1140,7 +1230,7 @@ function createDeliveryTile() {
   const button = document.createElement("button");
   button.className = "material-button incoming-toggle";
   button.type = "button";
-  button.textContent = "Tilkjørt +";
+  button.innerHTML = `<span class="incoming-plus" aria-hidden="true">+</span><span><strong>Tilkjørt</strong><small>masser inn</small></span>`;
   button.disabled = !state.selectedTruckId;
   button.addEventListener("click", toggleDeliveryMaterials);
 
@@ -1179,8 +1269,7 @@ function getMassImageClass(material) {
     SPRENGSTEIN: "mass-sprengstein",
     FORURENSET: "mass-forurenset",
     JORD: "mass-jord",
-    LEIRE: "mass-leire",
-    SAND: "mass-sand",
+    "BLANDET MASSE": "mass-blandet-masse",
   };
   return classes[normalizeMaterial(material)] ?? "";
 }
@@ -1342,14 +1431,18 @@ function clearTruckForm() {
   formMessage.textContent = "";
 }
 
-function addPreviousTruck(previousTruck) {
-  const existing = state.trucks.find((truck) => {
-    if (previousTruck.plate && truck.plate === previousTruck.plate) return true;
-    return !previousTruck.plate && truck.name?.trim().toLowerCase() === previousTruck.name?.trim().toLowerCase();
-  });
+function togglePreviousTruckForToday(previousTruck) {
+  const existing = state.trucks.find((truck) => isSameTruck(previousTruck, truck));
 
   if (existing) {
-    state.selectedTruckId = existing.id;
+    state.trucks = state.trucks.filter((truck) => truck.id !== existing.id);
+    if (state.selectedTruckId === existing.id) {
+      state.selectedTruckId = state.trucks[0]?.id ?? null;
+    }
+    if (editingTruckId === existing.id) {
+      clearTruckForm();
+      truckForm.classList.add("is-collapsed");
+    }
   } else {
     const truck = {
       id: createId(),
@@ -1361,12 +1454,39 @@ function addPreviousTruck(previousTruck) {
       lastUsedAt: new Date().toISOString(),
     };
     state.trucks.push(truck);
+    reattachLogsToTruck(truck);
     state.selectedTruckId = truck.id;
     rememberTruck(truck);
   }
 
   truckForm.classList.add("is-collapsed");
   persistAndRender();
+}
+
+function isSameTruck(first, second) {
+  if (first.plate && second.plate) return first.plate === second.plate;
+  const firstName = first.name?.trim().toLowerCase();
+  const secondName = second.name?.trim().toLowerCase();
+  return Boolean(firstName && secondName && firstName === secondName);
+}
+
+function getTruckLoadCount(truck) {
+  return state.logs.filter((log) => logBelongsToTruck(log, truck)).length;
+}
+
+function reattachLogsToTruck(truck) {
+  state.logs.forEach((log) => {
+    if (!logBelongsToTruck(log, truck)) return;
+    log.truckId = truck.id;
+    log.plate = truck.plate;
+    log.truckName = truck.name;
+  });
+}
+
+function logBelongsToTruck(log, truck) {
+  if (log.truckId === truck.id) return true;
+  if (log.plate && truck.plate) return log.plate === truck.plate;
+  return Boolean(log.truckName && truck.name && log.truckName.trim().toLowerCase() === truck.name.trim().toLowerCase());
 }
 
 function rememberTruck(truck) {
@@ -1509,7 +1629,21 @@ function downloadBlob(blob, filename) {
 }
 
 function getExportFilename(extension) {
-  return `lasteliste-${getReportDateKey()}.${extension}`;
+  const operator = getFilenamePart(state.operatorName);
+  return `lasteliste${operator ? `-${operator}` : ""}-${getReportDateKey()}.${extension}`;
+}
+
+function getFilenamePart(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "o")
+    .replace(/å/g, "a")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function getReportDateKey() {

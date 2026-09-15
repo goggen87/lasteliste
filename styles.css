@@ -208,29 +208,37 @@ h2 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: min(58%, 260px);
-  max-width: 62%;
-  border: 2px solid rgba(39, 101, 79, 0.34);
+  min-width: min(68%, 360px);
+  max-width: 72%;
+  border: 3px solid var(--accent);
   border-radius: 8px;
-  background: linear-gradient(180deg, #edf7f1 0%, var(--accent-soft) 100%);
+  background: linear-gradient(180deg, #c8ecd9 0%, #a9dcc5 100%);
   color: var(--accent-strong);
-  padding: 10px 12px;
-  font-size: 1.08rem;
-  font-weight: 900;
-  line-height: 1.12;
+  padding: 13px 14px;
+  font-size: 1.16rem;
+  font-weight: 950;
+  line-height: 1.08;
   overflow-wrap: anywhere;
   text-align: center;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.72), 0 6px 16px rgba(31, 79, 63, 0.2);
 }
 
 .section-heading .selected-truck {
   text-align: center;
 }
 
+.selected-truck-name {
+  display: block;
+  font-size: 1.48rem;
+  font-weight: 950;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
 .selected-truck-label {
-  margin-bottom: 3px;
-  color: var(--muted);
-  font-size: 0.66rem;
+  margin-bottom: 5px;
+  color: #173b2e;
+  font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0;
   line-height: 1;
@@ -286,6 +294,17 @@ select {
   color: var(--ink);
   padding: 0 12px;
   font-size: 1rem;
+}
+
+.crew-form input.is-required-warning {
+  border-color: var(--danger);
+  background: #fff1f1;
+  color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(157, 47, 47, 0.18);
+}
+
+.crew-form input.is-required-warning::placeholder {
+  color: rgba(157, 47, 47, 0.72);
 }
 
 input:focus,
@@ -428,7 +447,7 @@ button:focus-visible {
   padding: 8px 10px;
   cursor: pointer;
   font-weight: 850;
-  text-align: left;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 
@@ -595,30 +614,67 @@ button:focus-visible {
   width: 100%;
 }
 
+.material-tile-other .custom-toggle {
+  background: linear-gradient(180deg, #ffffff 0%, #eef3f1 100%);
+  border: 2px dashed rgba(39, 101, 79, 0.34);
+  box-shadow: 0 4px 12px rgba(31, 42, 39, 0.08);
+  color: #2f4640;
+  text-shadow: none;
+}
+
+.material-tile-other .custom-toggle:focus-visible,
+.material-tile-other .custom-toggle:hover {
+  background: linear-gradient(180deg, #f8fbfa 0%, #e3ede9 100%);
+  border-color: rgba(39, 101, 79, 0.58);
+  color: var(--accent-strong);
+}
+
 .material-tile-incoming .incoming-toggle {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 78% 50%, rgba(255, 255, 255, 0.2) 0 22px, transparent 23px),
-    linear-gradient(135deg, #1d8b58 0%, #0f5f3b 100%);
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.34);
+  background: linear-gradient(135deg, #13824f 0%, #075f3a 100%);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.16), 0 8px 18px rgba(13, 91, 55, 0.22);
+  text-align: center;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.36);
 }
 
-.material-tile-incoming .incoming-toggle::before,
-.material-tile-incoming .incoming-toggle::after {
-  content: "";
-  position: absolute;
-  right: 28px;
-  top: 50%;
+.material-tile-incoming .incoming-toggle strong,
+.material-tile-incoming .incoming-toggle small {
+  display: block;
+  line-height: 1.05;
+}
+
+.material-tile-incoming .incoming-toggle strong {
+  font-size: 1.08rem;
+}
+
+.material-tile-incoming .incoming-toggle small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.incoming-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 38px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  transform: translateY(-50%);
-}
-
-.material-tile-incoming .incoming-toggle::after {
-  transform: translateY(-50%) rotate(90deg);
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #087044;
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 0.9;
+  transform: translateY(-1px);
+  text-shadow: none;
 }
 
 .material-tile.is-dragging {
@@ -675,12 +731,8 @@ button:focus-visible {
   background-image: linear-gradient(rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.36)), url("./assets/masser/jord.jpg");
 }
 
-.mass-leire {
-  background-image: linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.34)), url("./assets/masser/leire.jpg");
-}
-
-.mass-sand {
-  background-image: linear-gradient(rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.32)), url("./assets/masser/sand.jpg");
+.mass-blandet-masse {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.34)), url("./assets/masser/blandet-masse.png");
 }
 
 .destination-field {
@@ -1043,6 +1095,15 @@ button:focus-visible {
   padding: 0 12px;
 }
 
+.app-version {
+  color: rgba(66, 82, 72, 0.58);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: center;
+  padding: 2px 0 12px;
+}
+
 .confirm-backdrop {
   position: fixed;
   inset: 0;
@@ -1152,9 +1213,9 @@ button:focus-visible {
   }
 
   .selected-truck {
-    min-width: 150px;
-    max-width: 66%;
-    font-size: 0.95rem;
+    min-width: 170px;
+    max-width: 70%;
+    font-size: 1.08rem;
   }
 
   .actions {

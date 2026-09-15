@@ -4,5 +4,9 @@
   "forurenset.jpg": "https://commons.wikimedia.org/wiki/File:Rubble_-_panoramio.jpg",
   "jord.jpg": "https://commons.wikimedia.org/wiki/File:Dirt_and_Mud_001_-_Loose_Dirt.jpg",
   "leire.jpg": "https://commons.wikimedia.org/wiki/File:Texture_de_boue_d%27argile_%C3%A0_Gogotinkpon_au_B%C3%A9nin.jpg",
-  "sand.jpg": "https://commons.wikimedia.org/wiki/File:Rippled_wavy_beach_sand_seamless_ground_texture.jpg"
+  "sand.jpg": "https://commons.wikimedia.org/wiki/File:Rippled_wavy_beach_sand_seamless_ground_texture.jpg",
+  "blandet-masse.png": {
+    "source": "Generated with Codex ImageGen",
+    "prompt": "Photorealistic close-up of mixed construction aggregate: angular grey stones mixed with fine dark-grey stone dust and fines."
+  }
 }

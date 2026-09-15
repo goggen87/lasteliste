@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#1f3b31" />
     <title>Lasteliste</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=58" />
-    <link rel="manifest" href="./manifest.webmanifest?v=58" />
-    <link rel="stylesheet" href="./styles.css?v=58" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=68" />
+    <link rel="manifest" href="./manifest.webmanifest?v=68" />
+    <link rel="stylesheet" href="./styles.css?v=68" />
   </head>
   <body>
     <main class="app-shell">
@@ -149,6 +149,7 @@
         </div>
         <div class="archive-list" id="archiveList"></div>
       </section>
+      <footer class="app-version" aria-label="Appversjon">Appversjon v68</footer>
     </main>
 
     <template id="emptyLogTemplate">
@@ -189,11 +190,13 @@
           </label>
           <label>
             Type masse
-            <input id="editLogMaterial" type="text" inputmode="text" />
+            <input id="editLogMaterial" type="text" inputmode="text" list="editLogMaterialSuggestions" />
+            <datalist id="editLogMaterialSuggestions"></datalist>
           </label>
           <label>
             Kjører til
-            <input id="editLogDestination" type="text" inputmode="text" />
+            <input id="editLogDestination" type="text" inputmode="text" list="editLogDestinationSuggestions" />
+            <datalist id="editLogDestinationSuggestions"></datalist>
           </label>
           <div class="confirm-actions">
             <button class="primary-button" id="saveEditLog" type="submit">Lagre</button>
@@ -227,6 +230,6 @@
     </div>
 
 
-    <script src="./app.js?v=58" type="module"></script>
+    <script src="./app.js?v=68" type="module"></script>
   </body>
 </html>
