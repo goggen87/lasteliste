@@ -4,18 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#1f3b31" />
-    <title>Lasteliste</title>
+    <title>Lastliste</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=68" />
-    <link rel="manifest" href="./manifest.webmanifest?v=68" />
-    <link rel="stylesheet" href="./styles.css?v=68" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=69" />
+    <link rel="manifest" href="./manifest.webmanifest?v=69" />
+    <link rel="stylesheet" href="./styles.css?v=69" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
         <div>
           <p class="eyebrow" id="todayLabel">Dagens lasteliste</p>
-          <h1>Lasteliste</h1>
+          <h1>Lastliste</h1>
         </div>
         <div class="top-actions">
           <form class="crew-form" id="crewForm" autocomplete="off">
@@ -109,7 +109,7 @@
         <form class="custom-entry is-hidden" id="customEntry" autocomplete="off">
           <label>
             Egen masse
-            <input id="customMaterialInput" type="text" inputmode="text" placeholder="TØMMER" />
+            <input id="customMaterialInput" type="text" inputmode="text" placeholder="MYRMASSE" />
           </label>
           <div class="custom-entry-actions">
             <button class="primary-button" id="saveCustomMaterial" type="submit">Legg til</button>
@@ -149,7 +149,8 @@
         </div>
         <div class="archive-list" id="archiveList"></div>
       </section>
-      <footer class="app-version" aria-label="Appversjon">Appversjon v68</footer>
+      <p class="support-note">Forslag til endring/forbedring meldes til Gordon på 41569668</p>
+      <footer class="app-version" aria-label="Appversjon">Appversjon v69</footer>
     </main>
 
     <template id="emptyLogTemplate">
@@ -190,13 +191,12 @@
           </label>
           <label>
             Type masse
-            <input id="editLogMaterial" type="text" inputmode="text" list="editLogMaterialSuggestions" />
-            <datalist id="editLogMaterialSuggestions"></datalist>
+            <select id="editLogMaterial"></select>
           </label>
-          <label>
+          <label class="destination-field" id="editLogDestinationField">
             Kjører til
-            <input id="editLogDestination" type="text" inputmode="text" list="editLogDestinationSuggestions" />
-            <datalist id="editLogDestinationSuggestions"></datalist>
+            <input id="editLogDestination" type="text" inputmode="text" autocomplete="off" />
+            <div class="destination-suggestions is-hidden" id="editLogDestinationSuggestionBox"></div>
           </label>
           <div class="confirm-actions">
             <button class="primary-button" id="saveEditLog" type="submit">Lagre</button>
@@ -230,6 +230,6 @@
     </div>
 
 
-    <script src="./app.js?v=68" type="module"></script>
+    <script src="./app.js?v=69" type="module"></script>
   </body>
 </html>

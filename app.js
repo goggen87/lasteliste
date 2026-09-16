@@ -15,13 +15,14 @@ const deliveryBaseMaterials = [
   "Grus 0-32 mm",
   "Engangsknust 0-63 mm",
   "Engangsknust 0-150 mm",
+  "Frest asfalt",
+  "Knust asfalt",
 ];
 
 const baseMaterials = [
   { name: "Sprengstein", color: "#596166" },
   { name: "Jord", color: "#5c6f3a" },
   { name: "Blandet masse", color: "#565f58" },
-  { name: "Stein", color: "#6f7880" },
   { name: "Asfalt", color: "#33383b" },
   { name: "Forurenset", color: "#8b6c3f" },
   { name: "Annet", color: "#27654f" },
@@ -89,9 +90,9 @@ const editLogDialog = document.querySelector("#editLogDialog");
 const editLogForm = document.querySelector("#editLogForm");
 const editLogTruck = document.querySelector("#editLogTruck");
 const editLogMaterial = document.querySelector("#editLogMaterial");
-const editLogMaterialSuggestions = document.querySelector("#editLogMaterialSuggestions");
 const editLogDestination = document.querySelector("#editLogDestination");
-const editLogDestinationSuggestions = document.querySelector("#editLogDestinationSuggestions");
+const editLogDestinationField = document.querySelector("#editLogDestinationField");
+const editLogDestinationSuggestionBox = document.querySelector("#editLogDestinationSuggestionBox");
 const cancelEditLog = document.querySelector("#cancelEditLog");
 const finishDayDialog = document.querySelector("#finishDayDialog");
 const confirmFinishDay = document.querySelector("#confirmFinishDay");
@@ -198,9 +199,26 @@ destinationInput.addEventListener("input", () => {
 
 destinationInput.addEventListener("focus", renderDestinationSuggestions);
 
+destinationInput.addEventListener("blur", () => {
+  rememberDestination(destinationInput.value, "out");
+  persist();
+});
+
+editLogDestination.addEventListener("input", () => renderEditDestinationSuggestions(false));
+editLogDestination.addEventListener("focus", () => renderEditDestinationSuggestions(true));
+editLogDestination.addEventListener("blur", () => {
+  rememberDestination(editLogDestination.value, "out");
+  persist();
+});
+
 document.addEventListener("click", (event) => {
   if (event.target === destinationInput || destinationSuggestions.contains(event.target)) return;
   destinationSuggestions.classList.add("is-hidden");
+});
+
+document.addEventListener("click", (event) => {
+  if (event.target === editLogDestination || editLogDestinationSuggestionBox.contains(event.target)) return;
+  editLogDestinationSuggestionBox.classList.add("is-hidden");
 });
 
 customEntry.addEventListener("submit", (event) => {
@@ -661,7 +679,8 @@ function renderLogs() {
 
     const material = document.createElement("span");
     material.className = "log-material";
-    material.textContent = isIncomingLog(log) ? `+ ${log.material}` : log.material;
+    const materialName = getDisplayMaterialName(log);
+    material.textContent = isIncomingLog(log) ? `+ ${materialName}` : materialName;
 
     const destination = document.createElement("span");
     destination.className = "log-destination";
@@ -704,10 +723,10 @@ function openEditLogDialog(logId) {
       return option;
     }),
   );
-  editLogMaterial.value = log.material;
   renderEditLogMaterialSuggestions(log);
-  editLogDestination.value = getDestinationLabel(log);
+  editLogMaterial.value = getDisplayMaterialName(log);
   renderEditLogDestinationSuggestions(log);
+  editLogDestination.value = isIncomingLog(log) ? "Tilkjørt" : getRawDestination(log);
   editLogDestination.disabled = isIncomingLog(log);
   editLogDialog.classList.remove("is-hidden");
   editLogTruck.focus();
@@ -715,17 +734,19 @@ function openEditLogDialog(logId) {
 
 function renderEditLogMaterialSuggestions(log) {
   const suggestions = getEditLogMaterialSuggestions(log);
-  editLogMaterialSuggestions.replaceChildren(
+  editLogMaterial.replaceChildren(
     ...suggestions.map((material) => {
       const option = document.createElement("option");
       option.value = material;
+      option.textContent = material;
       return option;
     }),
   );
 }
 
+
 function getEditLogMaterialSuggestions(log) {
-  const current = String(log?.material ?? "").trim();
+  const current = getDisplayMaterialName(log);
   const materials = isIncomingLog(log)
     ? [...deliveryBaseMaterials, ...state.incomingMaterials, current]
     : [
@@ -746,28 +767,83 @@ function getEditLogMaterialSuggestions(log) {
 }
 
 function renderEditLogDestinationSuggestions(log) {
-  const suggestions = isIncomingLog(log) ? ["Tilkjørt"] : getDestinationSuggestions();
-  editLogDestinationSuggestions.replaceChildren(
-    ...suggestions.map((place) => {
-      const option = document.createElement("option");
-      option.value = place;
-      return option;
-    }),
-  );
+  editLogDestinationField.classList.remove("is-hidden");
+  if (isIncomingLog(log)) editLogDestinationSuggestionBox.classList.add("is-hidden");
 }
 
-function getDestinationSuggestions() {
+function renderEditDestinationSuggestions(showAll = false) {
+  if (!editLogDestinationSuggestionBox || document.activeElement !== editLogDestination || editLogDestination.disabled) return;
+
+  const query = showAll ? "" : editLogDestination.value.trim().toLowerCase();
+  const matches = getDestinationSuggestions(editLogDestination.value)
+    .filter((place) => !query || place.toLowerCase().startsWith(query))
+    .slice(0, 6);
+
+  if (!matches.length) {
+    editLogDestinationSuggestionBox.classList.add("is-hidden");
+    editLogDestinationSuggestionBox.replaceChildren();
+    return;
+  }
+
+  editLogDestinationSuggestionBox.replaceChildren(
+    ...matches.map((place) => {
+      const item = document.createElement("div");
+      item.className = "destination-suggestion";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = place;
+      button.addEventListener("click", () => {
+        editLogDestination.value = place;
+        editLogDestinationSuggestionBox.classList.add("is-hidden");
+        rememberDestination(place, "out");
+        persist();
+      });
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "destination-remove";
+      remove.setAttribute("aria-label", `Slett ${place} fra forslag`);
+      remove.textContent = "x";
+      remove.addEventListener("click", () => {
+        state.destinationHistory = (state.destinationHistory ?? []).filter((saved) => saved.toLowerCase() !== place.toLowerCase());
+        persistAndRender();
+        editLogDestination.focus();
+      });
+
+      item.append(button, remove);
+      return item;
+    }),
+  );
+  editLogDestinationSuggestionBox.classList.remove("is-hidden");
+}
+
+function getDestinationSuggestions(current = "") {
   const seen = new Set();
-  return (state.destinationHistory ?? [])
+  return [current, state.destinationText, ...(state.destinationHistory ?? [])]
     .map((place) => String(place ?? "").trim())
     .filter((place) => {
-      if (!place) return false;
+      if (!place || isIgnoredDestinationSuggestion(place)) return false;
       const key = place.toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
     .slice(0, 20);
+}
+
+function getRawDestination(log) {
+  return isIncomingLog(log) ? "Tilkjørt" : String(log?.destination ?? "").trim();
+}
+
+function cleanDestinationHistory(history) {
+  return history
+    .map((place) => String(place ?? "").trim())
+    .filter((place) => place && !isIgnoredDestinationSuggestion(place));
+}
+
+function isIgnoredDestinationSuggestion(place) {
+  return ["ok", "nei"].includes(String(place ?? "").trim().toLowerCase());
 }
 
 function saveEditedLog() {
@@ -781,7 +857,7 @@ function saveEditedLog() {
     log.truckName = truck.name;
   }
 
-  const material = log.direction === "in" ? normalizeDeliveryMaterial(editLogMaterial.value) : normalizeMaterial(editLogMaterial.value);
+  const material = log.direction === "in" ? normalizeDeliveryMaterial(editLogMaterial.value) : getCanonicalMaterialName(editLogMaterial.value, "out");
   if (material) {
     log.material = material;
     if (log.direction === "in") {
@@ -838,6 +914,7 @@ function renderDestinationSuggestions() {
 
   const query = destinationInput.value.trim().toLowerCase();
   const matches = (state.destinationHistory ?? [])
+    .filter((place) => !isIgnoredDestinationSuggestion(place))
     .filter((place) => !query || place.toLowerCase().startsWith(query))
     .slice(0, 6);
 
@@ -882,7 +959,7 @@ function renderDestinationSuggestions() {
 
 function rememberDestination(destination, direction) {
   const place = String(destination ?? "").trim();
-  if (direction === "in" || !place) return;
+  if (direction === "in" || !place || isIgnoredDestinationSuggestion(place)) return;
 
   const withoutDuplicate = (state.destinationHistory ?? []).filter(
     (saved) => saved.toLowerCase() !== place.toLowerCase(),
@@ -903,15 +980,17 @@ function addLoad(material, options = {}) {
   const truck = state.trucks.find((item) => item.id === state.selectedTruckId);
   if (!truck) return;
 
-  const destination = options.direction === "in" ? "Tilkjørt" : destinationInput.value.trim();
+  const direction = options.direction === "in" ? "in" : "out";
+  const loggedMaterial = getCanonicalMaterialName(material, direction);
+  const destination = direction === "in" ? "Tilkjørt" : destinationInput.value.trim();
 
   state.logs.push({
     id: createId(),
     truckId: truck.id,
     plate: truck.plate,
     truckName: truck.name,
-    material,
-    direction: options.direction === "in" ? "in" : "out",
+    material: loggedMaterial,
+    direction,
     destination,
     capacity: truck.capacity,
     createdAt: new Date().toISOString(),
@@ -921,25 +1000,25 @@ function addLoad(material, options = {}) {
 
   truck.lastUsedAt = new Date().toISOString();
   rememberTruck(truck);
-  if (options.direction === "in") {
-    rememberIncomingMaterial(material);
+  if (direction === "in") {
+    rememberIncomingMaterial(loggedMaterial);
   } else {
-    rememberCustomMaterial(material);
+    rememberCustomMaterial(loggedMaterial);
   }
-  if (options.promote && options.direction !== "in") {
-    promoteMaterial(material);
+  if (options.promote && direction !== "in") {
+    promoteMaterial(loggedMaterial);
   } else if (!state.materialOrderLocked) {
-    state.lastSelectedMaterial = material;
+    state.lastSelectedMaterial = loggedMaterial;
   }
   closeMaterialDrawer();
-  confirmedMaterial = material;
+  confirmedMaterial = loggedMaterial;
   selectNextTruck(truck.id);
   persistAndRender();
   window.setTimeout(() => {
     document
-      .querySelectorAll(`[data-material="${cssEscape(material)}"] .material-button`)
+      .querySelectorAll(`[data-material="${cssEscape(loggedMaterial)}"] .material-button`)
       .forEach((button) => button.classList.remove("is-confirmed"));
-    if (confirmedMaterial === material) confirmedMaterial = null;
+    if (confirmedMaterial === loggedMaterial) confirmedMaterial = null;
   }, 2200);
 }
 
@@ -1010,7 +1089,7 @@ function createCsvBlob() {
       log.plate || "",
       formatAxles(truck?.axles ?? "custom"),
       isIncomingLog(log) ? "Tilkjørt" : "Kjørt ut",
-      log.material,
+      getDisplayMaterialName(log),
       getDestinationLabel(log),
       formatCsvNumber(log.capacity),
     ];
@@ -1078,7 +1157,7 @@ function loadState() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     return {
       trucks: Array.isArray(saved?.trucks) ? saved.trucks : [],
-      logs: Array.isArray(saved?.logs) ? saved.logs : [],
+      logs: normalizeSavedLogs(Array.isArray(saved?.logs) ? saved.logs : []),
       customMaterials: Array.isArray(saved?.customMaterials) ? saved.customMaterials : [],
       incomingMaterials: Array.isArray(saved?.incomingMaterials) ? saved.incomingMaterials : [],
       archivedReports: Array.isArray(saved?.archivedReports) ? saved.archivedReports : [],
@@ -1090,7 +1169,7 @@ function loadState() {
       operatorName: saved?.operatorName ?? "",
       machineName: saved?.machineName ?? "",
       destinationText: saved?.destinationText ?? "",
-      destinationHistory: Array.isArray(saved?.destinationHistory) ? saved.destinationHistory : [],
+      destinationHistory: cleanDestinationHistory(Array.isArray(saved?.destinationHistory) ? saved.destinationHistory : []),
       selectedTruckId: saved?.selectedTruckId ?? null,
     };
   } catch {
@@ -1136,6 +1215,27 @@ function normalizeDeliveryMaterial(value) {
     .trim()
     .replace(/\s+/g, " ")
     .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function getCanonicalMaterialName(value, direction = "out") {
+  const material = String(value ?? "").trim().replace(/\s+/g, " ");
+  if (!material) return "";
+  if (direction === "in") return normalizeDeliveryMaterial(material);
+
+  const normalized = normalizeMaterial(material);
+  const baseMaterial = baseMaterials.find((item) => normalizeMaterial(item.name) === normalized);
+  return baseMaterial ? baseMaterial.name : normalized;
+}
+
+function getDisplayMaterialName(log) {
+  return getCanonicalMaterialName(log?.material, isIncomingLog(log) ? "in" : "out");
+}
+
+function normalizeSavedLogs(logs) {
+  return logs.map((log) => ({
+    ...log,
+    material: getCanonicalMaterialName(log?.material, log?.direction === "in" ? "in" : "out"),
+  }));
 }
 
 function rememberCustomMaterial(material) {
@@ -1671,7 +1771,7 @@ function getReportLines() {
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const tonnes = formatTonnes(log.capacity).padStart(6);
     lines.push(
-      `${formatTime(log.createdAt).padEnd(8)} ${truncate(truck ? getTruckLogLabel(truck) : getFallbackLogLabel(log), 20).padEnd(20)} ${getDirectionLabel(log).padEnd(9)} ${truncate(log.material, 13).padEnd(13)} ${truncate(getDestinationLabel(log), 13).padEnd(13)} ${tonnes}`,
+      `${formatTime(log.createdAt).padEnd(8)} ${truncate(truck ? getTruckLogLabel(truck) : getFallbackLogLabel(log), 20).padEnd(20)} ${getDirectionLabel(log).padEnd(9)} ${truncate(getDisplayMaterialName(log), 13).padEnd(13)} ${truncate(getDestinationLabel(log), 13).padEnd(13)} ${tonnes}`,
     );
   });
 
@@ -1776,7 +1876,8 @@ function getFallbackLogLabel(log) {
 }
 
 function getMaterialCount(material) {
-  return state.logs.filter((log) => log.material === material && !isIncomingLog(log)).length;
+  const normalized = normalizeMaterial(material);
+  return state.logs.filter((log) => normalizeMaterial(log.material) === normalized && !isIncomingLog(log)).length;
 }
 
 function getMaterialCounts() {
@@ -1787,8 +1888,9 @@ function getMaterialTotals() {
   const totals = new Map();
   state.logs.forEach((log) => {
     const direction = isIncomingLog(log) ? "in" : "out";
-    const key = `${direction}:${log.material}`;
-    const saved = totals.get(key) ?? { material: log.material, direction, count: 0, tonnes: 0 };
+    const material = getDisplayMaterialName(log);
+    const key = `${direction}:${normalizeMaterial(material)}`;
+    const saved = totals.get(key) ?? { material, direction, count: 0, tonnes: 0 };
     saved.count += 1;
     saved.tonnes += Number(log.capacity) || 0;
     totals.set(key, saved);

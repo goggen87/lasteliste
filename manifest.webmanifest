@@ -1,6 +1,6 @@
 {
-  "name": "Lasteliste",
-  "short_name": "Lasteliste",
+  "name": "Lastliste",
+  "short_name": "Lastliste",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

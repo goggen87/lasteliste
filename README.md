@@ -1,4 +1,4 @@
-# Lasteliste
+# Lastliste
 
 En enkel mobilvennlig lasteapp som kan installeres på hjem-skjermen som PWA.
 
