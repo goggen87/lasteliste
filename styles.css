@@ -810,8 +810,42 @@ button:focus-visible {
   color: var(--danger) !important;
 }
 
-.material-button.is-confirmed {
+.material-button,
+.custom-material-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.material-button.is-confirmed,
+.custom-material-button.is-confirmed {
   animation: material-confirm 2100ms ease-out;
+}
+
+.material-button.is-confirmed::after,
+.custom-material-button.is-confirmed::after {
+  content: "✓\A LASS REGISTRERT";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  white-space: pre;
+  background: rgba(9, 115, 70, 0.9);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1.15;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow: none;
+  pointer-events: none;
+  animation: load-confirmation 2100ms ease-out both;
+}
+
+@keyframes load-confirmation {
+  0% { opacity: 0; transform: scale(0.9); }
+  8%, 72% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.03); }
 }
 
 @keyframes material-confirm {

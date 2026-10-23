@@ -90,6 +90,7 @@ const editLogDialog = document.querySelector("#editLogDialog");
 const editLogForm = document.querySelector("#editLogForm");
 const editLogTruck = document.querySelector("#editLogTruck");
 const editLogMaterial = document.querySelector("#editLogMaterial");
+const editLogTonnes = document.querySelector("#editLogTonnes");
 const editLogDestination = document.querySelector("#editLogDestination");
 const editLogDestinationField = document.querySelector("#editLogDestinationField");
 const editLogDestinationSuggestionBox = document.querySelector("#editLogDestinationSuggestionBox");
@@ -194,10 +195,16 @@ crewForm.addEventListener("input", () => {
 destinationInput.addEventListener("input", () => {
   state.destinationText = destinationInput.value.trim();
   persist();
-  renderDestinationSuggestions();
+  renderDestinationSuggestions(false);
 });
 
-destinationInput.addEventListener("focus", renderDestinationSuggestions);
+destinationInput.addEventListener("focus", () => {
+  requestAnimationFrame(() => {
+    const position = destinationInput.value.length;
+    destinationInput.setSelectionRange(position, position);
+  });
+  renderDestinationSuggestions(true);
+});
 
 destinationInput.addEventListener("blur", () => {
   rememberDestination(destinationInput.value, "out");
@@ -229,7 +236,7 @@ customEntry.addEventListener("submit", (event) => {
     return;
   }
 
-  addLoad(name, { promote: true });
+  addLoad(name);
   customMaterialInput.value = "";
   customEntry.classList.add("is-hidden");
   overflowMaterials.classList.add("is-hidden");
@@ -662,11 +669,15 @@ function renderLogs() {
     item.title = "Dobbelttrykk for å redigere lasset";
     item.addEventListener("click", () => {
       const now = Date.now();
-      const isDoubleTap = lastLogTap.id === log.id && now - lastLogTap.at < 450;
+      const isDoubleTap = lastLogTap.id === log.id && now - lastLogTap.at < 800;
       lastLogTap = { id: log.id, at: now };
       if (isDoubleTap) {
         openEditLogDialog(log.id);
       }
+    });
+    item.addEventListener("dblclick", () => {
+      lastLogTap = { id: null, at: 0 };
+      openEditLogDialog(log.id);
     });
 
     const time = document.createElement("span");
@@ -725,6 +736,9 @@ function openEditLogDialog(logId) {
   );
   renderEditLogMaterialSuggestions(log);
   editLogMaterial.value = getDisplayMaterialName(log);
+  if (editLogTonnes) {
+    editLogTonnes.value = Number.isFinite(Number(log.capacity)) ? Number(log.capacity) : "";
+  }
   renderEditLogDestinationSuggestions(log);
   editLogDestination.value = isIncomingLog(log) ? "Tilkjørt" : getRawDestination(log);
   editLogDestination.disabled = isIncomingLog(log);
@@ -857,6 +871,11 @@ function saveEditedLog() {
     log.truckName = truck.name;
   }
 
+  const tonnes = Number(editLogTonnes?.value);
+  if (Number.isFinite(tonnes) && tonnes >= 0) {
+    log.capacity = tonnes;
+  }
+
   const material = log.direction === "in" ? normalizeDeliveryMaterial(editLogMaterial.value) : getCanonicalMaterialName(editLogMaterial.value, "out");
   if (material) {
     log.material = material;
@@ -909,10 +928,10 @@ function renderMaterialTotals() {
 }
 
 
-function renderDestinationSuggestions() {
+function renderDestinationSuggestions(showAll = false) {
   if (!destinationSuggestions || document.activeElement !== destinationInput) return;
 
-  const query = destinationInput.value.trim().toLowerCase();
+  const query = showAll ? "" : destinationInput.value.trim().toLowerCase();
   const matches = (state.destinationHistory ?? [])
     .filter((place) => !isIgnoredDestinationSuggestion(place))
     .filter((place) => !query || place.toLowerCase().startsWith(query))
@@ -1005,15 +1024,11 @@ function addLoad(material, options = {}) {
   } else {
     rememberCustomMaterial(loggedMaterial);
   }
-  if (options.promote && direction !== "in") {
-    promoteMaterial(loggedMaterial);
-  } else if (!state.materialOrderLocked) {
-    state.lastSelectedMaterial = loggedMaterial;
-  }
   closeMaterialDrawer();
   confirmedMaterial = loggedMaterial;
   selectNextTruck(truck.id);
   persistAndRender();
+  scheduleMaterialPosition(loggedMaterial, options, direction);
   window.setTimeout(() => {
     document
       .querySelectorAll(`[data-material="${cssEscape(loggedMaterial)}"] .material-button`)
@@ -1196,6 +1211,19 @@ function loadState() {
 function persistAndRender() {
   persist();
   render();
+}
+
+function scheduleMaterialPosition(material, options, direction) {
+  if (direction === "in" || (!options.promote && state.materialOrderLocked)) return;
+
+  window.setTimeout(() => {
+    if (options.promote) {
+      promoteMaterial(material);
+    } else if (!state.materialOrderLocked) {
+      state.lastSelectedMaterial = material;
+    }
+    persistAndRender();
+  }, 3000);
 }
 
 function persist() {

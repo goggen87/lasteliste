@@ -8,7 +8,7 @@
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=69" />
     <link rel="manifest" href="./manifest.webmanifest?v=69" />
-    <link rel="stylesheet" href="./styles.css?v=69" />
+    <link rel="stylesheet" href="./styles.css?v=70" />
   </head>
   <body>
     <main class="app-shell">
@@ -150,7 +150,7 @@
         <div class="archive-list" id="archiveList"></div>
       </section>
       <p class="support-note">Forslag til endring/forbedring meldes til Gordon på 41569668</p>
-      <footer class="app-version" aria-label="Appversjon">Appversjon v69</footer>
+      <footer class="app-version" aria-label="Appversjon">Appversjon v70</footer>
     </main>
 
     <template id="emptyLogTemplate">
@@ -183,7 +183,7 @@
     <div class="confirm-backdrop is-hidden" id="editLogDialog" role="dialog" aria-modal="true" aria-labelledby="editLogTitle">
       <div class="confirm-box edit-log-box">
         <h2 id="editLogTitle">Rediger lass</h2>
-        <p>Tidspunkt og tonn beholdes.</p>
+        <p>Tidspunktet beholdes.</p>
         <form class="edit-log-form" id="editLogForm" autocomplete="off">
           <label>
             Bil
@@ -192,6 +192,10 @@
           <label>
             Type masse
             <select id="editLogMaterial"></select>
+          </label>
+          <label>
+            Tonn
+            <input id="editLogTonnes" type="number" min="0" step="0.1" inputmode="decimal" required />
           </label>
           <label class="destination-field" id="editLogDestinationField">
             Kjører til
@@ -230,6 +234,6 @@
     </div>
 
 
-    <script src="./app.js?v=69" type="module"></script>
+    <script src="./app.js?v=70" type="module"></script>
   </body>
 </html>
