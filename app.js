@@ -110,6 +110,8 @@ let isOrganizing = false;
 let editingTruckId = null;
 let editingLogId = null;
 let pendingDeletePreviousTruckKey = null;
+let deferredMaterialOrder = [];
+let materialOrderTimer = null;
 
 operatorInput.value = state.operatorName;
 machineInput.value = state.machineName;
@@ -1002,6 +1004,10 @@ function addLoad(material, options = {}) {
   const direction = options.direction === "in" ? "in" : "out";
   const loggedMaterial = getCanonicalMaterialName(material, direction);
   const destination = direction === "in" ? "Tilkjørt" : destinationInput.value.trim();
+  const materialOrderBeforeLoad =
+    direction === "out" && !state.materialOrderLocked
+      ? sortMaterials(getAllAvailableMaterials()).map((item) => item.name)
+      : [];
 
   state.logs.push({
     id: createId(),
@@ -1027,8 +1033,8 @@ function addLoad(material, options = {}) {
   closeMaterialDrawer();
   confirmedMaterial = loggedMaterial;
   selectNextTruck(truck.id);
+  scheduleMaterialPosition(materialOrderBeforeLoad, direction);
   persistAndRender();
-  scheduleMaterialPosition(loggedMaterial, options, direction);
   window.setTimeout(() => {
     document
       .querySelectorAll(`[data-material="${cssEscape(loggedMaterial)}"] .material-button`)
@@ -1213,15 +1219,14 @@ function persistAndRender() {
   render();
 }
 
-function scheduleMaterialPosition(material, options, direction) {
-  if (direction === "in" || (!options.promote && state.materialOrderLocked)) return;
+function scheduleMaterialPosition(previousOrder, direction) {
+  if (direction === "in" || state.materialOrderLocked || !previousOrder.length) return;
 
-  window.setTimeout(() => {
-    if (options.promote) {
-      promoteMaterial(material);
-    } else if (!state.materialOrderLocked) {
-      state.lastSelectedMaterial = material;
-    }
+  deferredMaterialOrder = previousOrder;
+  window.clearTimeout(materialOrderTimer);
+  materialOrderTimer = window.setTimeout(() => {
+    deferredMaterialOrder = [];
+    materialOrderTimer = null;
     persistAndRender();
   }, 3000);
 }
@@ -1458,10 +1463,21 @@ function sortMaterials(materials) {
     });
   }
 
+  if (deferredMaterialOrder.length) {
+    const order = new Map(deferredMaterialOrder.map((name, index) => [normalizeMaterial(name), index]));
+    return materials.sort((first, second) => {
+      const firstIndex = order.has(normalizeMaterial(first.name)) ? order.get(normalizeMaterial(first.name)) : Number.MAX_SAFE_INTEGER;
+      const secondIndex = order.has(normalizeMaterial(second.name)) ? order.get(normalizeMaterial(second.name)) : Number.MAX_SAFE_INTEGER;
+      return firstIndex - secondIndex || first.name.localeCompare(second.name, "no");
+    });
+  }
+
   return materials.sort((first, second) => {
-    if (state.lastSelectedMaterial === first.name && state.lastSelectedMaterial !== second.name) return -1;
-    if (state.lastSelectedMaterial === second.name && state.lastSelectedMaterial !== first.name) return 1;
-    return getMaterialCount(second.name) - getMaterialCount(first.name) || first.name.localeCompare(second.name, "no");
+    const countDifference = getMaterialCount(second.name) - getMaterialCount(first.name);
+    if (countDifference) return countDifference;
+
+    const firstUseDifference = getMaterialFirstUsedAt(first.name) - getMaterialFirstUsedAt(second.name);
+    return firstUseDifference || first.name.localeCompare(second.name, "no");
   });
 }
 
@@ -1906,6 +1922,14 @@ function getFallbackLogLabel(log) {
 function getMaterialCount(material) {
   const normalized = normalizeMaterial(material);
   return state.logs.filter((log) => normalizeMaterial(log.material) === normalized && !isIncomingLog(log)).length;
+}
+
+function getMaterialFirstUsedAt(material) {
+  const normalized = normalizeMaterial(material);
+  const firstLog = state.logs
+    .filter((log) => normalizeMaterial(log.material) === normalized && !isIncomingLog(log))
+    .sort((first, second) => new Date(first.createdAt) - new Date(second.createdAt))[0];
+  return firstLog ? new Date(firstLog.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
 }
 
 function getMaterialCounts() {
