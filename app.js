@@ -288,8 +288,23 @@ confirmDeletePreviousTruck.addEventListener("click", () => {
 cancelDeletePreviousTruck.addEventListener("click", closeDeletePreviousTruckDialog);
 
 organizeButton.addEventListener("click", () => {
-  isOrganizing = !isOrganizing;
   closeMaterialDrawer();
+
+  if (isOrganizing) {
+    isOrganizing = false;
+    renderMaterials();
+    return;
+  }
+
+  if (state.materialOrderLocked) {
+    state.materialOrderLocked = false;
+    state.materialOrder = [];
+    state.lastSelectedMaterial = "";
+    persistAndRender();
+    return;
+  }
+
+  isOrganizing = true;
   renderMaterials();
 });
 
@@ -462,7 +477,7 @@ function render() {
 
 function renderMaterials() {
   materialGrid.classList.toggle("is-organizing", isOrganizing);
-  organizeButton.textContent = isOrganizing ? "Ferdig" : "Organiser";
+  organizeButton.textContent = isOrganizing ? "Ferdig" : state.materialOrderLocked ? "Auto sort" : "Organiser";
   organizeButton.classList.toggle("is-active", isOrganizing);
 
   const fixedMaterials = baseMaterials.filter((material) => material.name !== "Annet" && !isDeletedMaterial(material.name));
