@@ -1019,6 +1019,15 @@ button:focus-visible {
   font-size: 0.88rem;
 }
 
+.log-date-divider {
+  margin-top: 6px;
+  border-top: 2px solid #bd4d4d;
+  color: #9b3838;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 8px 2px 0;
+}
+
 .log-row.is-incoming {
   border-color: rgba(22, 132, 79, 0.28);
   background: linear-gradient(180deg, #ecf8f1 0%, #dcf1e5 100%);
@@ -1111,6 +1120,32 @@ button:focus-visible {
 .archive-list {
   display: grid;
   gap: 8px;
+}
+
+.archive-subheading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 18px 0 8px;
+  border-top: 1px solid rgba(39, 101, 79, 0.16);
+  padding-top: 14px;
+}
+
+.archive-subheading h3,
+.archive-subheading p {
+  margin: 0;
+}
+
+.archive-subheading h3 {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.archive-subheading p {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
 }
 
 .archive-item {

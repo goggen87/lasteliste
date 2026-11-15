@@ -8,7 +8,7 @@
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png?v=69" />
     <link rel="manifest" href="./manifest.webmanifest?v=69" />
-    <link rel="stylesheet" href="./styles.css?v=71" />
+    <link rel="stylesheet" href="./styles.css?v=72" />
   </head>
   <body>
     <main class="app-shell">
@@ -144,13 +144,18 @@
 
       <section class="panel archive-panel">
         <div class="section-heading">
-          <h2>Tidligere lastelister</h2>
+          <h2>Tidligere dagslister</h2>
           <p>Siste 7 PDF</p>
         </div>
         <div class="archive-list" id="archiveList"></div>
+        <div class="archive-subheading">
+          <h3>Tidligere ukeslister</h3>
+          <p>Mandag-fredag</p>
+        </div>
+        <div class="archive-list" id="weeklyArchiveList"></div>
       </section>
       <p class="support-note">Forslag til endring/forbedring meldes til Gordon på 41569668</p>
-      <footer class="app-version" aria-label="Appversjon">Appversjon v71</footer>
+      <footer class="app-version" aria-label="Appversjon">Appversjon v72</footer>
     </main>
 
     <template id="emptyLogTemplate">
@@ -234,6 +239,6 @@
     </div>
 
 
-    <script src="./app.js?v=71" type="module"></script>
+    <script src="./app.js?v=72" type="module"></script>
   </body>
 </html>

@@ -1,5 +1,6 @@
 const STORAGE_KEY = "lasteliste:v1";
 const MAX_ARCHIVED_REPORTS = 7;
+const MAX_WEEKLY_REPORTS = 8;
 const MAX_VISIBLE_MATERIALS = 6;
 
 const deliveryBaseMaterials = [
@@ -66,6 +67,7 @@ const cancelDeliveryMaterial = document.querySelector("#cancelDeliveryMaterial")
 const logList = document.querySelector("#logList");
 const materialTotals = document.querySelector("#materialTotals");
 const archiveList = document.querySelector("#archiveList");
+const weeklyArchiveList = document.querySelector("#weeklyArchiveList");
 const selectedTruckLabel = document.querySelector("#selectedTruckLabel");
 const totalLoads = document.querySelector("#totalLoads");
 const totalTonnes = document.querySelector("#totalTonnes");
@@ -474,6 +476,7 @@ function render() {
   renderLogs();
   renderMaterialTotals();
   renderArchiveList();
+  renderWeeklyArchiveList();
   renderDestinationSuggestions();
   renderSummary();
 }
@@ -682,7 +685,9 @@ function renderLogs() {
     header.append(cell);
   });
 
-  const rows = [...state.logs].reverse().map((log) => {
+  const reversedLogs = [...state.logs].reverse();
+  const rows = reversedLogs.flatMap((log, index) => {
+    const isNewDay = index === 0 || getLogDateKey(reversedLogs[index - 1].createdAt) !== getLogDateKey(log.createdAt);
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const item = document.createElement("div");
     item.className = `log-row${isIncomingLog(log) ? " is-incoming" : ""}`;
@@ -733,7 +738,12 @@ function renderLogs() {
     });
 
     item.append(time, truckCell, material, destination, tonnes, remove);
-    return item;
+    if (!isNewDay) return [item];
+
+    const divider = document.createElement("div");
+    divider.className = "log-date-divider";
+    divider.textContent = formatReportDateLabel(new Date(log.createdAt));
+    return [divider, item];
   });
 
   logList.replaceChildren(header, ...rows);
@@ -1200,6 +1210,7 @@ function loadState() {
       customMaterials: Array.isArray(saved?.customMaterials) ? saved.customMaterials : [],
       incomingMaterials: Array.isArray(saved?.incomingMaterials) ? saved.incomingMaterials : [],
       archivedReports: Array.isArray(saved?.archivedReports) ? saved.archivedReports : [],
+      weeklyReports: Array.isArray(saved?.weeklyReports) ? saved.weeklyReports : [],
       previousTrucks: Array.isArray(saved?.previousTrucks) ? saved.previousTrucks : [],
       deletedMaterials: Array.isArray(saved?.deletedMaterials) ? saved.deletedMaterials : [],
       materialOrder: Array.isArray(saved?.materialOrder) ? saved.materialOrder : [],
@@ -1218,6 +1229,7 @@ function loadState() {
       customMaterials: [],
       incomingMaterials: [],
       archivedReports: [],
+      weeklyReports: [],
       previousTrucks: [],
       deletedMaterials: [],
       materialOrder: [],
@@ -1705,56 +1717,117 @@ function renderArchiveList() {
   if (!reports.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "Ingen lagrede lastelister ennå.";
+    empty.textContent = "Ingen lagrede dagslister ennå.";
     archiveList.replaceChildren(empty);
     return;
   }
 
-  archiveList.replaceChildren(
-    ...reports.map((report) => {
-      const item = document.createElement("div");
-      item.className = "archive-item";
+  archiveList.replaceChildren(...reports.map((report) => createArchiveItem(report, () => openArchivedReport(report.id))));
+}
 
-      const info = document.createElement("span");
-      info.textContent = `${report.label} - ${report.loadCount} lass / ${formatTonnes(report.tonnes)} tonn`;
+function renderWeeklyArchiveList() {
+  if (!weeklyArchiveList) return;
 
-      const button = document.createElement("button");
-      button.className = "secondary-button archive-open";
-      button.type = "button";
-      button.textContent = "PDF";
-      button.addEventListener("click", () => openArchivedReport(report.id));
+  const reports = state.weeklyReports ?? [];
+  if (!reports.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "Ingen lagrede ukeslister ennå.";
+    weeklyArchiveList.replaceChildren(empty);
+    return;
+  }
 
-      item.append(info, button);
-      return item;
-    }),
-  );
+  weeklyArchiveList.replaceChildren(...reports.map((report) => createArchiveItem(report, () => openWeeklyReport(report.id))));
+}
+
+function createArchiveItem(report, onOpen) {
+  const item = document.createElement("div");
+  item.className = "archive-item";
+
+  const info = document.createElement("span");
+  info.textContent = `${report.label} - ${report.loadCount} lass / ${formatTonnes(report.tonnes)} tonn`;
+
+  const button = document.createElement("button");
+  button.className = "secondary-button archive-open";
+  button.type = "button";
+  button.textContent = "PDF";
+  button.addEventListener("click", onOpen);
+
+  item.append(info, button);
+  return item;
 }
 
 async function archiveCurrentReport() {
   if (!state.logs.length) return;
 
-  const blob = createPdfBlob(getReportLines());
-  const dataUrl = await blobToDataUrl(blob);
-  const dateKey = getReportDateKey();
+  const logs = [...state.logs].sort((first, second) => new Date(first.createdAt) - new Date(second.createdAt));
+  const dateKey = getReportDateKey(logs);
   const report = {
     id: dateKey,
-    label: formatReportDateLabel(new Date()),
-    filename: getExportFilename("pdf"),
-    loadCount: state.logs.length,
-    tonnes: sumTonnes(),
+    label: getReportDateLabel(logs),
+    filename: getExportFilename("pdf", getReportDateRangeKey(logs)),
+    loadCount: logs.length,
+    tonnes: sumTonnes(logs),
     createdAt: new Date().toISOString(),
-    dataUrl,
+    dataUrl: await blobToDataUrl(createPdfBlob(getReportLines(logs))),
   };
 
   const withoutSameDay = (state.archivedReports ?? []).filter((saved) => saved.id !== report.id);
   state.archivedReports = [report, ...withoutSameDay]
     .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt))
     .slice(0, MAX_ARCHIVED_REPORTS);
+
+  await archiveWeeklyReports(logs);
   persist();
+}
+
+async function archiveWeeklyReports(logs) {
+  const weeks = new Map();
+  logs.forEach((log) => {
+    const weekKey = getWeekKey(new Date(log.createdAt));
+    const weekLogs = weeks.get(weekKey) ?? [];
+    weekLogs.push(log);
+    weeks.set(weekKey, weekLogs);
+  });
+
+  for (const [weekKey, weekLogs] of weeks) {
+    const existing = (state.weeklyReports ?? []).find((report) => report.id === weekKey);
+    const mergedLogs = mergeLogs(existing?.logs ?? [], weekLogs);
+    const referenceDate = new Date(mergedLogs[0].createdAt);
+    const report = {
+      id: weekKey,
+      label: getWeekLabel(referenceDate),
+      filename: getWeeklyExportFilename(referenceDate),
+      loadCount: mergedLogs.length,
+      tonnes: sumTonnes(mergedLogs),
+      createdAt: new Date().toISOString(),
+      logs: mergedLogs,
+      dataUrl: await blobToDataUrl(
+        createPdfBlob(getReportLines(mergedLogs, { title: "Ukens lasteliste", dateLabel: `Uke ${getIsoWeek(referenceDate)}` })),
+      ),
+    };
+
+    const withoutSameWeek = (state.weeklyReports ?? []).filter((saved) => saved.id !== weekKey);
+    state.weeklyReports = [report, ...withoutSameWeek]
+      .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt))
+      .slice(0, MAX_WEEKLY_REPORTS);
+  }
+}
+
+function mergeLogs(existingLogs, addedLogs) {
+  const merged = new Map();
+  [...existingLogs, ...addedLogs].forEach((log) => merged.set(log.id, log));
+  return [...merged.values()].sort((first, second) => new Date(first.createdAt) - new Date(second.createdAt));
 }
 
 function openArchivedReport(reportId) {
   const report = (state.archivedReports ?? []).find((saved) => saved.id === reportId);
+  if (!report) return;
+  downloadBlob(dataUrlToBlob(report.dataUrl), report.filename);
+}
+
+function openWeeklyReport(reportId) {
+  const report = (state.weeklyReports ?? []).find((saved) => saved.id === reportId);
   if (!report) return;
   downloadBlob(dataUrlToBlob(report.dataUrl), report.filename);
 }
@@ -1790,9 +1863,9 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function getExportFilename(extension) {
+function getExportFilename(extension, dateRange = getReportDateRangeKey()) {
   const operator = getFilenamePart(state.operatorName);
-  return `lasteliste${operator ? `-${operator}` : ""}-${getReportDateKey()}.${extension}`;
+  return `lasteliste${operator ? `-${operator}` : ""}-${dateRange}.${extension}`;
 }
 
 function getFilenamePart(value) {
@@ -1808,20 +1881,71 @@ function getFilenamePart(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-function getReportDateKey() {
-  return new Date().toISOString().slice(0, 10);
+function getReportDateKey(logs = state.logs) {
+  const firstLog = [...logs].sort((first, second) => new Date(first.createdAt) - new Date(second.createdAt))[0];
+  return getLogDateKey(firstLog?.createdAt ?? new Date());
+}
+
+function getReportDateRangeKey(logs = state.logs) {
+  const sortedLogs = [...logs].sort((first, second) => new Date(first.createdAt) - new Date(second.createdAt));
+  const firstDate = formatExportDate(new Date(sortedLogs[0]?.createdAt ?? new Date()));
+  const lastDate = formatExportDate(new Date(sortedLogs.at(-1)?.createdAt ?? new Date()));
+  return firstDate === lastDate ? firstDate : `${firstDate}-${lastDate}`;
+}
+
+function formatExportDate(date) {
+  return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function formatReportDateLabel(date) {
   return capitalize(date.toLocaleDateString("no-NO", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }));
 }
 
-function getReportLines() {
-  const date = new Date().toLocaleDateString("no-NO");
+function getLogDateKey(value) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getIsoWeek(date) {
+  const copy = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = copy.getUTCDay() || 7;
+  copy.setUTCDate(copy.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(copy.getUTCFullYear(), 0, 1));
+  return Math.ceil(((copy - yearStart) / 86400000 + 1) / 7);
+}
+
+function getWeekKey(date) {
+  const copy = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = copy.getUTCDay() || 7;
+  copy.setUTCDate(copy.getUTCDate() + 4 - day);
+  return `${copy.getUTCFullYear()}-uke-${String(getIsoWeek(date)).padStart(2, "0")}`;
+}
+
+function getWeekLabel(date) {
+  return `Uke ${getIsoWeek(date)} - ${date.getFullYear()}`;
+}
+
+function getWeeklyExportFilename(date) {
+  const operator = getFilenamePart(state.operatorName);
+  return `ukesliste${operator ? `-${operator}` : ""}-${getWeekKey(date)}.pdf`;
+}
+
+function getReportDateLabel(logs) {
+  const dates = [...new Set(logs.map((log) => getLogDateKey(log.createdAt)))];
+  if (dates.length === 0) return formatReportDateLabel(new Date());
+  if (dates.length === 1) return formatReportDateLabel(new Date(logs[0].createdAt));
+  return `${formatReportDateLabel(new Date(logs[0].createdAt))} til ${formatReportDateLabel(new Date(logs[logs.length - 1].createdAt))}`;
+}
+
+function getReportLines(logs = state.logs, options = {}) {
+  const sortedLogs = [...logs].sort((first, second) => new Date(first.createdAt) - new Date(second.createdAt));
   const tableHeader = `${"Tid".padEnd(8)} ${"Bil".padEnd(20)} ${"Type".padEnd(9)} ${"Masse".padEnd(13)} ${"Til".padEnd(13)} ${"Tonn".padStart(6)}`;
   const lines = [
-    "Lasteliste",
-    `Dato: ${date}`,
+    options.title ?? "Lasteliste",
+    `${options.dateLabel ?? "Dato"}: ${options.dateLabel ? getWeekLabel(new Date(sortedLogs[0]?.createdAt ?? new Date())) : getReportDateLabel(sortedLogs)}`,
     `Operatør: ${state.operatorName || "-"}`,
     `Maskin: ${state.machineName || "-"}`,
     "",
@@ -1829,7 +1953,16 @@ function getReportLines() {
     "-".repeat(tableHeader.length),
   ];
 
-  state.logs.forEach((log) => {
+  let previousDateKey = "";
+  sortedLogs.forEach((log) => {
+    const dateKey = getLogDateKey(log.createdAt);
+    if (dateKey !== previousDateKey) {
+      if (previousDateKey) lines.push("");
+      if (sortedLogs.length && new Set(sortedLogs.map((item) => getLogDateKey(item.createdAt))).size > 1) {
+        lines.push(`--- ${formatReportDateLabel(new Date(log.createdAt))} ---`);
+      }
+      previousDateKey = dateKey;
+    }
     const truck = state.trucks.find((item) => item.id === log.truckId);
     const tonnes = formatTonnes(log.capacity).padStart(6);
     lines.push(
@@ -1838,11 +1971,11 @@ function getReportLines() {
   });
 
   lines.push("");
-  lines.push(`Totalt lass: ${state.logs.length}`);
-  lines.push(`Ca. tonn: ${formatTonnes(sumTonnes())}`);
+  lines.push(`Totalt lass: ${sortedLogs.length}`);
+  lines.push(`Ca. tonn: ${formatTonnes(sumTonnes(sortedLogs))}`);
   lines.push("");
   lines.push("Totalt per masse:");
-  getMaterialTotals().forEach(({ material, direction, count, tonnes }) =>
+  getMaterialTotals(sortedLogs).forEach(({ material, direction, count, tonnes }) =>
     lines.push(`${getDirectionLabel({ direction })} - ${material}: ${count} lass - ca. ${formatTonnes(tonnes)} tonn`),
   );
   return lines;
@@ -1954,9 +2087,9 @@ function getMaterialCounts() {
   return getMaterialTotals().map(({ material, count }) => [material, count]);
 }
 
-function getMaterialTotals() {
+function getMaterialTotals(logs = state.logs) {
   const totals = new Map();
-  state.logs.forEach((log) => {
+  logs.forEach((log) => {
     const direction = isIncomingLog(log) ? "in" : "out";
     const material = getDisplayMaterialName(log);
     const key = `${direction}:${normalizeMaterial(material)}`;
@@ -1998,8 +2131,8 @@ function formatTime(value) {
   return new Date(value).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
 }
 
-function sumTonnes() {
-  return state.logs.reduce((sum, log) => sum + (Number(log.capacity) || 0), 0);
+function sumTonnes(logs = state.logs) {
+  return logs.reduce((sum, log) => sum + (Number(log.capacity) || 0), 0);
 }
 
 function getDestinationLabel(log) {
